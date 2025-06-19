@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+model Session {
+  id               String            @id @map("_id")
+  accessToken      String?
+  expires          DateTime?
+  isOnline         Boolean
+  scope            String?
+  shop             String
+  state            String
+  apiKey           String
+  onlineAccessInfo OnlineAccessInfo?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model OnlineAccessInfo {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  session             Session?        @relation(fields: [sessionId], references: [id])
+  sessionId           String?         @unique
+  expiresIn           Int
+  associatedUserScope String
+  associatedUser      AssociatedUser?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model AssociatedUser {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  onlineAccessInfo   OnlineAccessInfo? @relation(fields: [onlineAccessInfoId], references: [id])
+  onlineAccessInfoId String?           @unique
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  userId             BigInt
+  firstName          String
+  lastName           String
+  email              String
+  accountOwner       Boolean
+  locale             String
+  collaborator       Boolean
+  emailVerified      Boolean
+}
+
+model ProductYmm {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  handle        String
+  compatibility String
+  make          String
+  model         String
+  year          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+type Product {
+  gid             String
+  title           String
+  legacyResourceId String
+}
+
+model ProductsEntry {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  startFrom String
+  end       String
+  make      String
+  model     String
+  shop      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("ProductsEntry")
+}

@@ -1,0 +1,34 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "8dd5ca1071d78b899bdfe9ef40ebccf1"
+name = "Eparts master app"
+handle = "eparts-master-app"
+application_url = "https://favourite-tahoe-turbo-exploration.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "navjot-work.myshopify.com"
+include_config_on_deploy = true
+
+[webhooks]
+api_version = "2025-04"
+
+[access.admin]
+direct_api_mode = "offline"
+embedded_app_direct_api_access = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,read_products"
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/auth/callback",
+  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/auth/shopify/callback",
+  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
