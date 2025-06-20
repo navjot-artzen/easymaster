@@ -82,3 +82,18 @@ model ProductsEntry {
 
   @@map("ProductsEntry")
 }
+
+
+model Make {
+  id    String    @id @default(auto()) @map("_id") @db.ObjectId
+  name  String  @unique
+  models Model[]
+}
+
+model Model {
+  id     String    @id @default(auto()) @map("_id") @db.ObjectId
+  name   String    @unique
+  makeId String
+  make   Make   @relation(fields: [makeId], references: [id])
+  @@unique([name, makeId]) // prevent duplicate models under same make
+}

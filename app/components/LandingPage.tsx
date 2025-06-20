@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Page,
   Layout,
@@ -16,8 +16,28 @@ import {
   Link,
 } from "@shopify/polaris";
 import { SearchIcon, ProductIcon, MobileIcon } from "@shopify/polaris-icons";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 const LandingPage = () => {
+  const app = useAppBridge();
+  const [themeEditorUrl, setThemeEditorUrl] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true); // Only true on client
+    if (!app) return;
+
+    const shop = app?.config?.shop;
+    const appApiKey = app?.config?.apiKey;
+
+    if (shop && appApiKey) {
+      const blockId = "app:vehicle-search";
+      setThemeEditorUrl(
+        `https://${shop}/admin/themes/current/editor?context=apps&activateAppId=shopify://apps/${appApiKey}&activateBlockId=${blockId}`,
+      );
+    }
+  }, [app]);
+
   return (
     <Page fullWidth>
       {/* Hero Section */}
@@ -40,10 +60,11 @@ const LandingPage = () => {
               search
             </Text>
             <InlineStack align="center" gap="400">
-              <Button variant="primary" size="large">
-                Get Started
-              </Button>
-              <Button size="large">View Demo</Button>
+              <Link url="/database">
+                <Button variant="primary" size="large">
+                  Get Started
+                </Button>
+              </Link>
             </InlineStack>
           </BlockStack>
         </div>
@@ -168,16 +189,22 @@ const LandingPage = () => {
             >
               Ready to transform your product search?
             </Text>
+            <Text as="p" alignment="center">
+              Add vehicle search to your store in minutes through add block
+            </Text>
             <InlineStack align="center" gap="400">
-              <Link url="/database">
-                <Button variant="primary" size="large">
-                  Eparts master
+              {isMounted && themeEditorUrl ? (
+                <Link url={themeEditorUrl} target="_blank">
+                  <Button variant="primary" size="large">
+                    Theme Editor
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="primary" size="large" disabled>
+                  Loading…
                 </Button>
-              </Link>
+              )}
             </InlineStack>
-            {/* <Text as="p" variant="bodyMd" tone="subdued">
-              14-day free trial · No coding required
-            </Text> */}
           </BlockStack>
         </Card>
       </Layout.Section>

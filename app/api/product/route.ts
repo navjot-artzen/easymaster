@@ -1,4 +1,3 @@
-// File: app/api/product/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -7,7 +6,15 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const shop = searchParams.get('shop');
+    if (!shop) {
+      return NextResponse.json({ error: 'Missing shop parameter' }, { status: 400 });
+    }
     const entries = await prisma.productsEntry.findMany({
+      where:{
+        shop
+      },
       orderBy: {
         createdAt: 'desc',
       },

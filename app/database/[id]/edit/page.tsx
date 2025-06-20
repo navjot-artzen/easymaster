@@ -2,9 +2,9 @@
 
 import {
   Page, Card, TextField, Select, BlockStack, InlineStack, Icon, Tabs,
-  IndexTable, Text, Button, Modal, Thumbnail
+  IndexTable, Text, Button, Modal, Spinner
 } from '@shopify/polaris';
-import { ProductAddIcon, SearchListIcon } from '@shopify/polaris-icons';
+import { ProductAddIcon, SearchListIcon, DeleteIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -32,8 +32,8 @@ interface EntryData {
 export default function EditSearchEntryPage() {
   const { id } = useParams();
   const app = useAppBridge();
-const router = useRouter();
- const [entry, setEntry] = useState<EntryData | null>(null);
+  const router = useRouter();
+  const [entry, setEntry] = useState<EntryData | null>(null);
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
   const [make, setMake] = useState('');
@@ -42,6 +42,8 @@ const router = useRouter();
   const [allFetchedProducts, setAllFetchedProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingEntry, setLoadingEntry] = useState(false);
 
   const { selectedResources, handleSelectionChange } = useIndexResourceState(allFetchedProducts);
 
@@ -50,9 +52,9 @@ const router = useRouter();
     return { label: value, value };
   });
 
-  // Fetch initial entry
   useEffect(() => {
     if (!id) return;
+    setLoadingEntry(true);
     fetch(`/api/product/${id}`)
       .then((res) => res.json())
       .then((data: EntryData) => {
@@ -63,42 +65,43 @@ const router = useRouter();
         setModel(data.model);
         setProducts(data.products || []);
       })
-      .catch((err) => console.error('Error fetching entry:', err));
+      .catch((err) => console.error('Error fetching entry:', err))
+      .finally(() => setLoadingEntry(false));
   }, [id]);
 
-  // Fetch products for modal
- useEffect(() => {
-  const shop = app?.config?.shop;
-  if (!shop) return;
+  useEffect(() => {
+    const shop = app?.config?.shop;
+    if (!shop) return;
 
-  async function fetchProducts() {
-    try {
-      const res = await axios.post(`/api/getproduct?shop=${shop}`, {
-        query: GET_PRODUCTS_QUERY,
-      });
+    async function fetchProducts() {
+      try {
+        setLoadingProducts(true);
+        const res = await axios.post(`/api/getproduct?shop=${shop}`, {
+          query: GET_PRODUCTS_QUERY,
+        });
 
-      const productEdges = res.data?.data?.products?.edges || [];
+        const productEdges = res.data?.data?.products?.edges || [];
+        const productNodes = productEdges.map((edge: any) => {
+          const gid: string = edge.node.id;
+          const legacyResourceId = gid.split('/').pop();
+          return {
+            id: gid,
+            gid,
+            title: edge.node.title,
+            legacyResourceId,
+          };
+        });
 
-      const productNodes = productEdges.map((edge: any) => {
-        const gid: string = edge.node.id;
-        const legacyResourceId = gid.split('/').pop(); // extract the last part
-        return {
-          id: gid,
-          gid,
-          title: edge.node.title,
-          legacyResourceId,
-        };
-      });
-
-      setAllFetchedProducts(productNodes);
-    } catch (error) {
-      console.error('Error fetching products:', error);
+        setAllFetchedProducts(productNodes);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
     }
-  }
 
-  fetchProducts();
-}, [app]);
-
+    fetchProducts();
+  }, [app]);
 
   const filteredProducts = useMemo(() => {
     return allFetchedProducts.filter((product) =>
@@ -107,14 +110,11 @@ const router = useRouter();
   }, [allFetchedProducts, searchTerm]);
 
   const handleAddProducts = () => {
-    const selectedData = allFetchedProducts
-      .filter((product) => selectedResources.includes(product.id));
-
+    const selectedData = allFetchedProducts.filter((product) => selectedResources.includes(product.id));
     setProducts((prev) => {
       const existingIds = new Set(prev.map((p) => p.id));
       return [...prev, ...selectedData.filter((p) => !existingIds.has(p.id))];
     });
-
     setModalOpen(false);
   };
 
@@ -126,10 +126,11 @@ const router = useRouter();
           <Icon source={ProductAddIcon} tone="base" />
           <Text as="span">{products.length} product{products.length !== 1 ? 's' : ''}</Text>
         </InlineStack>
-      )as unknown as string,
+      ) as unknown as string,
       panelID: 'products-content',
     },
   ];
+
   const handleSave = async () => {
     const shop = app?.config?.shop;
     if (!shop || !id) return;
@@ -143,11 +144,10 @@ const router = useRouter();
         products,
         shop,
       };
-
+      console.log("payload after deletion:",JSON.stringify(payload));
       const res = await axios.put(`/api/product/${id}`, payload);
       app.toast?.show('Entry updated successfully!');
       router.push('/database');
-    
     } catch (error) {
       console.error('Update failed:', error);
       alert('Failed to update. Check console for details.');
@@ -158,47 +158,66 @@ const router = useRouter();
     <Page
       title="Edit Search Entry"
       backAction={{ content: 'Back', url: '/database' }}
-      primaryAction={{ content: 'Save', onAction:handleSave }}
-      secondaryActions={[{ content: 'Save & add next', onAction: handleSave }]}
+      primaryAction={{ content: 'Save', onAction: handleSave }}
     >
       <Card>
         <BlockStack gap="300">
           <Text as="h4" variant="headingMd">Search form preview</Text>
-          <InlineStack wrap gap="300">
-            <Select label="Year From" options={yearOptions} value={yearFrom} onChange={setYearFrom} />
-            <Select label="Year To" options={yearOptions} value={yearTo} onChange={setYearTo} />
-            <TextField label="Make" value={make} onChange={setMake} autoComplete='off'/>
-            <TextField  label="Model" value={model} onChange={setModel} autoComplete='off' />
-          </InlineStack>
+          {loadingEntry ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <Spinner accessibilityLabel="Loading YMM" size="large" />
+            </div>
+          ) : (
+            <InlineStack wrap gap="300">
+              <Select label="Year From" options={yearOptions} value={yearFrom} onChange={setYearFrom} />
+              <Select label="Year To" options={yearOptions} value={yearTo} onChange={setYearTo} />
+              <TextField label="Make" value={make} onChange={setMake} autoComplete='off' />
+              <TextField label="Model" value={model} onChange={setModel} autoComplete='off' />
+            </InlineStack>
+          )}
         </BlockStack>
       </Card>
 
       <Card padding="0">
-        <Tabs tabs={tabs} selected={0} onSelect={() => {}} />
+        <Tabs tabs={tabs} selected={0} onSelect={() => { }} />
         <div style={{ padding: '16px' }}>
-          <IndexTable
-            resourceName={{ singular: 'product', plural: 'products' }}
-            itemCount={products.length}
-            headings={[{ title: 'ID' }, { title: 'Title' }]}
-            selectable={false}
-          >
-            {products.map((product, index) => (
-              <IndexTable.Row
-                key={product.legacyResourceId}
-                id={product.legacyResourceId}
-                position={index}
-              >
-                <IndexTable.Cell>
-                  <Text as="span" variant="bodyMd">{product.legacyResourceId}</Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Text as="span" variant="bodyMd" fontWeight="medium">{product.title}</Text>
-                </IndexTable.Cell>
-               
-              </IndexTable.Row>
-            ))}
-          </IndexTable>
-
+          {loadingProducts ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <Spinner accessibilityLabel="Loading products" size="large" />
+            </div>
+          ) : (
+            <IndexTable
+              resourceName={{ singular: 'product', plural: 'products' }}
+              itemCount={products.length}
+              headings={[{ title: 'ID' }, { title: 'Title' }, { title: 'Actions' }]}
+              selectable={false}
+            >
+              {products.map((product, index) => (
+                <IndexTable.Row
+                  key={product.legacyResourceId}
+                  id={product.legacyResourceId}
+                  position={index}
+                >
+                  <IndexTable.Cell>
+                    <Text as="span" variant="bodyMd">{product.legacyResourceId}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text as="span" variant="bodyMd" fontWeight="medium">{product.title}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Button
+                      icon={DeleteIcon}
+                      variant="tertiary"
+                      accessibilityLabel="Remove product"
+                      onClick={() => {
+                        setProducts(prev => prev.filter(p => p.legacyResourceId !== product.legacyResourceId));
+                      }}
+                    />
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              ))}
+            </IndexTable>
+          )}
           <div style={{ textAlign: 'right', marginTop: '1rem' }}>
             <Button onClick={() => setModalOpen(true)}>Add Products</Button>
           </div>

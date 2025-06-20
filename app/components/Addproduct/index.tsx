@@ -17,6 +17,7 @@ import {
 } from '@shopify/polaris';
 import {
   CollectionIcon,
+  DeleteIcon,
   ProductAddIcon,
   SearchListIcon,
 } from '@shopify/polaris-icons';
@@ -44,7 +45,7 @@ export default function ProductTargetSelector() {
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [entries, setEntries] = useState<{ from: string; to: string; make: string; model: string }[]>([]);
-const router = useRouter();
+  const router = useRouter();
 
   const app = useAppBridge();
 
@@ -123,33 +124,35 @@ const router = useRouter();
   const displayItems = selectedItems.filter((item) => item.type === selected);
 
   const handleSave = async () => {
-  try {
-    const shop = app?.config?.shop;
-    if (!shop || selectedItems.length === 0 || entries.length === 0) {
-      console.error("Missing required data");
-      return;
-    }
+    try {
+      const shop = app?.config?.shop;
+      if (!shop || selectedItems.length === 0 || entries.length === 0) {
+        console.error("Missing required data");
+        return;
+      }
 
-    const payload = entries.map((entry) => ({
-      shop,
-      year: `${entry.from}-${entry.to}`,
-      make: entry.make.trim(),
-      model: entry.model.trim(),
-      products: selectedItems.map((item) => ({
-        productId: item.id,
-        title: item.title,
-      })),
-    }));
-    console.log("Payload to save:", payload);
-    const res = await axios.post("/api/product/add", payload);
+      const payload = entries.map((entry) => ({
+        shop,
+        year: `${entry.from}-${entry.to}`,
+        make: entry.make.trim(),
+        model: entry.model.trim(),
+        products: selectedItems.map((item) => ({
+          productId: item.id,
+          title: item.title,
+        })),
+      }));
+      console.log("Payload to save:", payload);
+      console.log("passing data:", JSON.stringify(payload))
+
+      const res = await axios.post("/api/product/add", payload);
       app.toast?.show('Entry Created successfully!');
       router.push('/database');
-    
-    console.log("Saved successfully:", res.data);
-  } catch (error) {
-    console.error("Failed to save:", error);
-  }
-};
+
+      console.log("Saved successfully:", res.data);
+    } catch (error) {
+      console.error("Failed to save:", error);
+    }
+  };
 
 
   return (
@@ -271,6 +274,7 @@ const router = useRouter();
                     { title: 'To' },
                     { title: 'Make' },
                     { title: 'Model' },
+                    { title: 'Actions' },
                   ]}
                 >
                   {entries.map((item, index) => (
@@ -279,10 +283,21 @@ const router = useRouter();
                       <IndexTable.Cell>{item.to}</IndexTable.Cell>
                       <IndexTable.Cell>{item.make}</IndexTable.Cell>
                       <IndexTable.Cell>{item.model}</IndexTable.Cell>
+                      <IndexTable.Cell>
+                        <Button
+                          icon={DeleteIcon}
+                          variant="tertiary"
+                          onClick={() => {
+                            setEntries(prev => prev.filter((_, i) => i !== index));
+                          }}
+                          accessibilityLabel="Delete entry"
+                        />
+                      </IndexTable.Cell>
                     </IndexTable.Row>
                   ))}
                 </IndexTable>
               </Card>
+
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

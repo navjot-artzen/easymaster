@@ -3,42 +3,31 @@ import prisma from '@/lib/prisma';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
+import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
 
 export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+  const { id } = params;
 
-  
+  try {
+    const entry = await prisma.productsEntry.findFirst({
+      where: { id }
+    });
 
-    try {
-        const entry = await prisma.productsEntry.findFirst({
-            where: { id }
-        });
-
-        if (!entry) {
-            return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
-        }
-
-        return NextResponse.json(entry);
-    } catch (error: any) {
-        console.error('Error fetching entry by ID:', error);
-        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+    if (!entry) {
+      return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }
-}
 
-function generateYearTags(start: string, end: string): string[] {
-  const startYear = parseInt(start, 10);
-  const endYear = parseInt(end, 10);
-  const years: string[] = [];
-
-  for (let y = startYear; y <= endYear; y++) {
-    years.push(String(y));
+    return NextResponse.json(entry);
+  } catch (error: any) {
+    console.error('Error fetching entry by ID:', error);
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }
-
-  return years;
 }
+
+
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -50,34 +39,26 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
     const accessToken = session.accessToken;
-    const mutationResponses = [];
 
-    // Step 1: Get current entry
     const existingEntry = await prisma.productsEntry.findUnique({ where: { id } });
-
     if (!existingEntry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }
 
-    const existingProductsMap = new Map(
+    const oldProductMap = new Map<string, any>(
       (existingEntry.products || []).map((p: any) => [p.legacyResourceId, p])
     );
+    const newProductMap = new Map<string, any>(
+      products.map((p: any) => [p.legacyResourceId, p])
+    );
 
-    const updatedProducts = Array.from(existingProductsMap.values());
+    const removedProducts = Array.from(oldProductMap.values()).filter(
+      (p) => !newProductMap.has(p.legacyResourceId)
+    );
+    const retainedProducts = Array.from(newProductMap.values());
 
-    for (const product of products) {
-      if (!existingProductsMap.has(product.legacyResourceId)) {
-        updatedProducts.push({
-          gid: product.id,
-          title: product.title,
-          legacyResourceId: product.legacyResourceId,
-        });
-      }
-    }
-
-    // Step 2: Update entry in DB
+    // Update entry with retained products
     const updatedEntry = await prisma.productsEntry.update({
       where: { id },
       data: {
@@ -85,28 +66,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         end,
         make,
         model,
-        products: updatedProducts,
+        products: retainedProducts as any[], // ensure it’s typed as a valid Prisma JSON array
         updatedAt: new Date(),
       },
     });
 
-    // Step 3: Update tags on Shopify for each product
-    for (const product of updatedProducts) {
-      // Fetch current tags
-      const fetchTagsQuery = {
-        query: `
-          query {
-            product(id: "${product.gid}") {
-              id
-              tags
-            }
-          }
-        `,
-      };
+    const ymmTags = generateMakeModelYearTags(make, model, startFrom, end);
+    const mutationResponses = [];
 
+    // === Remove YMM tags from removed products ===
+    for (const product of removedProducts) {
       const tagRes = await axios.post(
         `https://${shop}/admin/api/2024-01/graphql.json`,
-        fetchTagsQuery,
+        {
+          query: `query { product(id: "${product.gid}") { id tags } }`,
+        },
         {
           headers: {
             'X-Shopify-Access-Token': accessToken,
@@ -115,29 +89,67 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         }
       );
 
-      const existingTags = tagRes.data?.data?.product?.tags || [];
+      const existingTags: string[] = tagRes.data?.data?.product?.tags || [];
+      const cleanedTags = existingTags.filter(
+        (tag) => !ymmTags.includes(tag)
+      );
 
-      // Remove year range and existing make/model/year tags
-      const updatedTags = existingTags
-        .filter((tag: string) => !/^\d{4}-\d{4}$/.test(tag)) // remove ranges
-        .filter((tag: string) => isNaN(Number(tag)) || Number(tag) < 1900 || Number(tag) > 2100) // remove years
-        .filter((tag: string) => tag !== make && tag !== model)
-        .concat(generateYearTags(startFrom, end), [make, model]);
-
-      // Update tags via mutation
-      const graphqlData = {
-        query: PRODUCT_UPDATE_MUTATION,
-        variables: {
-          input: {
-            id: product.gid,
-            tags: updatedTags,
+      await axios.post(
+        `https://${shop}/admin/api/2024-01/graphql.json`,
+        {
+          query: PRODUCT_UPDATE_MUTATION,
+          variables: {
+            input: {
+              id: product.gid,
+              tags: cleanedTags,
+            },
           },
         },
-      };
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    // === Add YMM tags to retained products ===
+    for (const product of retainedProducts) {
+      const tagRes = await axios.post(
+        `https://${shop}/admin/api/2024-01/graphql.json`,
+        {
+          query: `query { product(id: "${product.gid}") { id tags } }`,
+        },
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const existingTags: string[] = tagRes.data?.data?.product?.tags || [];
+
+      // Keep unrelated tags
+      const filteredTags = existingTags.filter(
+        (tag) => !ymmTags.includes(tag)
+      );
+
+      // Merge with current YMM tags
+      const mergedTags = Array.from(new Set([...filteredTags, ...ymmTags]));
 
       const mutationRes = await axios.post(
         `https://${shop}/admin/api/2024-01/graphql.json`,
-        graphqlData,
+        {
+          query: PRODUCT_UPDATE_MUTATION,
+          variables: {
+            input: {
+              id: product.gid,
+              tags: mergedTags,
+            },
+          },
+        },
         {
           headers: {
             'X-Shopify-Access-Token': accessToken,
@@ -162,6 +174,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Failed to update entry.', error: error.message }, { status: 500 });
   }
 }
+
 
 
 

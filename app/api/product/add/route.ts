@@ -3,8 +3,42 @@ import prisma from '@/lib/prisma';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
+import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
 
 export const dynamic = 'force-dynamic';
+
+const makeModalEntry = async ( make: any, model: any)=>{
+    console.log("make:",make,"model:",model)
+    if (!make || !model) {
+      return NextResponse.json({ error: 'make and model are required' }, { status: 400 });
+    }
+
+    // Step 1: Check or create Make
+    let existingMake = await prisma.make.findUnique({ where: { name: make } });
+
+    if (!existingMake) {
+      existingMake = await prisma.make.create({
+        data: { name: make }
+      });
+    }
+
+    // Step 2: Check or create Model under the Make
+    let existingModel = await prisma.model.findFirst({
+      where: {
+        name: model,
+        makeId: existingMake.id
+      }
+    });
+
+    if (!existingModel) {
+      existingModel = await prisma.model.create({
+        data: {
+          name: model,
+          makeId: existingMake.id
+        }
+      });
+    }
+}
 
 type ProductEntryInput = {
   shop: string;
@@ -22,6 +56,9 @@ function extractLegacyId(gid: string): string {
   return parts[parts.length - 1];
 }
 
+// Helper to generate tags like "Make-Model-YYYY"
+
+
 export async function POST(req: NextRequest) {
   try {
     const payload = (await req.json()) as ProductEntryInput[];
@@ -31,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const shop = payload[0].shop;
-    
+
     if (!shop) {
       return NextResponse.json({ error: 'Missing shop' }, { status: 400 });
     }
@@ -41,6 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Session or access token not found.' }, { status: 402 });
     }
 
+    const accessToken = session.accessToken;
     const mutationResponses = [];
     let createdCount = 0;
 
@@ -48,7 +86,7 @@ export async function POST(req: NextRequest) {
     const productTagsMap = new Map<string, Set<string>>();
 
     for (const entry of payload) {
-      // Validate each entry
+      // Validate entry
       if (
         !entry.year ||
         !entry.make ||
@@ -58,13 +96,14 @@ export async function POST(req: NextRequest) {
       ) {
         return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
       }
+            await makeModalEntry(entry.make, entry.model);
 
-      // Handle year range
+      // Parse year range
       const [startFrom, end] = entry.year.includes('-')
         ? entry.year.split('-')
         : [entry.year, entry.year];
 
-      // Save entry to DB
+      // Save to DB
       await prisma.productsEntry.create({
         data: {
           startFrom,
@@ -82,21 +121,18 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      // Generate tag set: years + make + model
-      const tagSet = new Set<string>([entry.make, entry.model]);
-      for (let y = Number(startFrom); y <= Number(end); y++) {
-        tagSet.add(String(y));
-      }
+      // Generate tags like Tata-Nano-2005, ..., Honda-Civic-2017
+      const customTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end);
 
       // Accumulate tags per product
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
-        tagSet.forEach((tag) => existingTags.add(tag));
+        customTags.forEach((tag) => existingTags.add(tag));
         productTagsMap.set(product.productId, existingTags);
       }
     }
 
-    // Now apply tags once per product
+    // Apply Shopify mutations per product
     for (const [productId, tagsSet] of productTagsMap.entries()) {
       const tags = Array.from(tagsSet);
 
@@ -115,7 +151,7 @@ export async function POST(req: NextRequest) {
         graphqlData,
         {
           headers: {
-            'X-Shopify-Access-Token': session.accessToken,
+            'X-Shopify-Access-Token': accessToken,
             'Content-Type': 'application/json',
           },
         }

@@ -115,7 +115,7 @@ function handleSearch() {
     const cleanYear = year.toString().trim();
 
     // Build the URL path
-    const vehiclePath = `${cleanMake}+${cleanModel}+${cleanYear}`;
+    const vehiclePath = `${cleanMake}-${cleanModel}-${cleanYear}`;
     const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
     
     // Redirect to the collection with vehicle filter
