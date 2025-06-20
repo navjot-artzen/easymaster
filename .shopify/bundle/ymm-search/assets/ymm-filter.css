@@ -1,0 +1,56 @@
+.ymm-filter {
+  margin-top: 10px;
+  font-family: Arial, sans-serif;
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(202, 4, 4, 0.1);
+}
+
+.ymm-inner-filter {
+  margin-top: 10px;
+  font-family: Arial, sans-serif;
+  /* padding: 10px; */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ymm-title {
+  color: #c0181e;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.ymm-dropdown {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  background-color: #f1f1f1;
+  color: #333;
+  width: 25%;
+  cursor: pointer;
+}
+
+.ymm-dropdown:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.ymm-search-button {
+  background-color: #e41d24;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.ymm-clear-link {
+  /* margin-left: auto; */
+  color: #c0181e;
+  text-decoration: underline;
+  font-size: 14px;
+  cursor: pointer;
+}

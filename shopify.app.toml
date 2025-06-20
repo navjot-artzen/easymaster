@@ -3,7 +3,7 @@
 client_id = "8dd5ca1071d78b899bdfe9ef40ebccf1"
 name = "Eparts master app"
 handle = "eparts-master-app"
-application_url = "https://favourite-tahoe-turbo-exploration.trycloudflare.com"
+application_url = "https://attempting-upset-tile-collections.trycloudflare.com"
 embedded = true
 
 [build]
@@ -25,9 +25,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/auth/callback",
-  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/auth/shopify/callback",
-  "https://favourite-tahoe-turbo-exploration.trycloudflare.com/api/auth/callback"
+  "https://attempting-upset-tile-collections.trycloudflare.com/auth/callback",
+  "https://attempting-upset-tile-collections.trycloudflare.com/auth/shopify/callback",
+  "https://attempting-upset-tile-collections.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

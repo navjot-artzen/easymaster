@@ -4,41 +4,9 @@ import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
+import { makeModalEntry } from '@/lib/db/db-function';
 
 export const dynamic = 'force-dynamic';
-
-const makeModalEntry = async ( make: any, model: any)=>{
-    console.log("make:",make,"model:",model)
-    if (!make || !model) {
-      return NextResponse.json({ error: 'make and model are required' }, { status: 400 });
-    }
-
-    // Step 1: Check or create Make
-    let existingMake = await prisma.make.findUnique({ where: { name: make } });
-
-    if (!existingMake) {
-      existingMake = await prisma.make.create({
-        data: { name: make }
-      });
-    }
-
-    // Step 2: Check or create Model under the Make
-    let existingModel = await prisma.model.findFirst({
-      where: {
-        name: model,
-        makeId: existingMake.id
-      }
-    });
-
-    if (!existingModel) {
-      existingModel = await prisma.model.create({
-        data: {
-          name: model,
-          makeId: existingMake.id
-        }
-      });
-    }
-}
 
 type ProductEntryInput = {
   shop: string;
@@ -96,7 +64,7 @@ export async function POST(req: NextRequest) {
       ) {
         return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
       }
-            await makeModalEntry(entry.make, entry.model);
+      await makeModalEntry(entry.make, entry.model);
 
       // Parse year range
       const [startFrom, end] = entry.year.includes('-')

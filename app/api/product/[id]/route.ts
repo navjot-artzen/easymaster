@@ -4,6 +4,7 @@ import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
 import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
+import { makeModalEntry } from '@/lib/db/db-function';
 
 export async function GET(
   req: NextRequest,
@@ -26,8 +27,6 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }
 }
-
-
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -52,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const newProductMap = new Map<string, any>(
       products.map((p: any) => [p.legacyResourceId, p])
     );
-
+    await makeModalEntry(make, model);
     const removedProducts = Array.from(oldProductMap.values()).filter(
       (p) => !newProductMap.has(p.legacyResourceId)
     );
