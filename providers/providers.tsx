@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             Home
           </Link>
           <Link href="/database">Product Database</Link>
-          <Link href="/new">New</Link>
+          {/* <Link href="/new">New</Link> */}
         </ui-nav-menu>
         <SessionProvider>{children}</SessionProvider>
       </TanstackProvider>
