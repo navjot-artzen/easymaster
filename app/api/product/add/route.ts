@@ -10,9 +10,10 @@ export const dynamic = 'force-dynamic';
 
 type ProductEntryInput = {
   shop: string;
-  year: string; // e.g., "2020-2025" or "2024"
+  year: string;
   make: string;
   model: string;
+  vehicleType: string;
   products: {
     productId: string;
     title: string;
@@ -24,8 +25,13 @@ function extractLegacyId(gid: string): string {
   return parts[parts.length - 1];
 }
 
-// Helper to generate tags like "Make-Model-YYYY"
-
+const GET_PRODUCT_TAGS_QUERY = `
+  query getProductTags($id: ID!) {
+    product(id: $id) {
+      tags
+    }
+  }
+`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,7 +42,6 @@ export async function POST(req: NextRequest) {
     }
 
     const shop = payload[0].shop;
-
     if (!shop) {
       return NextResponse.json({ error: 'Missing shop' }, { status: 400 });
     }
@@ -50,28 +55,16 @@ export async function POST(req: NextRequest) {
     const mutationResponses = [];
     let createdCount = 0;
 
-    // Map to accumulate tags per product
     const productTagsMap = new Map<string, Set<string>>();
 
     for (const entry of payload) {
-      // Validate entry
-      if (
-        !entry.year ||
-        !entry.make ||
-        !entry.model ||
-        !Array.isArray(entry.products) ||
-        entry.products.length === 0
-      ) {
+      if (!entry.year || !entry.make || !entry.model || !entry.vehicleType || !Array.isArray(entry.products) || entry.products.length === 0) {
         return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
       }
-      await makeModalEntry(entry.make, entry.model);
 
-      // Parse year range
-      const [startFrom, end] = entry.year.includes('-')
-        ? entry.year.split('-')
-        : [entry.year, entry.year];
+      const [startFrom, end] = entry.year.includes('-') ? entry.year.split('-') : [entry.year, entry.year];
+      await makeModalEntry(entry.make, entry.model, startFrom, end);
 
-      // Save to DB
       await prisma.productsEntry.create({
         data: {
           startFrom,
@@ -79,6 +72,7 @@ export async function POST(req: NextRequest) {
           shop,
           make: entry.make,
           model: entry.model,
+          vehicleType: entry.vehicleType, // NEW
           products: entry.products.map((p) => ({
             title: p.title,
             gid: p.productId,
@@ -89,10 +83,8 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      // Generate tags like Tata-Nano-2005, ..., Honda-Civic-2017
       const customTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end);
 
-      // Accumulate tags per product
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
         customTags.forEach((tag) => existingTags.add(tag));
@@ -100,16 +92,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Apply Shopify mutations per product
     for (const [productId, tagsSet] of productTagsMap.entries()) {
-      const tags = Array.from(tagsSet);
+      const existingRes = await axios.post(
+        `https://${shop}/admin/api/2024-01/graphql.json`,
+        {
+          query: GET_PRODUCT_TAGS_QUERY,
+          variables: { id: productId },
+        },
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const existingTags: string[] = existingRes.data?.data?.product?.tags || [];
+      const newTags = Array.from(tagsSet);
+      const mergedTags = Array.from(new Set([...existingTags, ...newTags]));
 
       const graphqlData = {
         query: PRODUCT_UPDATE_MUTATION,
         variables: {
           input: {
             id: productId,
-            tags,
+            tags: mergedTags,
           },
         },
       };
@@ -138,9 +145,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error saving product entries:', error);
-    return NextResponse.json(
-      { error: 'Server error', details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Server error', details: error.message }, { status: 500 });
   }
 }

@@ -44,14 +44,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (!existingEntry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }
-
+    await makeModalEntry(make, model,startFrom,end);
     const oldProductMap = new Map<string, any>(
       (existingEntry.products || []).map((p: any) => [p.legacyResourceId, p])
     );
     const newProductMap = new Map<string, any>(
       products.map((p: any) => [p.legacyResourceId, p])
     );
-    await makeModalEntry(make, model);
+
     const removedProducts = Array.from(oldProductMap.values()).filter(
       (p) => !newProductMap.has(p.legacyResourceId)
     );

@@ -44,7 +44,10 @@ export default function ProductTargetSelector() {
   const [year, setYear] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
-  const [entries, setEntries] = useState<{ from: string; to: string; make: string; model: string }[]>([]);
+  const [vehicleType, setVehicleType] = useState('2-wheeler');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [entries, setEntries] = useState<{ from: string; to: string; make: string; model: string; vehicleType: string }[]>([]);
   const router = useRouter();
 
   const app = useAppBridge();
@@ -53,6 +56,11 @@ export default function ProductTargetSelector() {
     const value = (1990 + i).toString();
     return { label: value, value };
   });
+
+  const vehicleTypeOptions = [
+    { label: '2-wheeler', value: '2-wheeler' },
+    { label: '4-wheeler', value: '4-wheeler' },
+  ];
 
   const Tile = ({
     label,
@@ -124,10 +132,12 @@ export default function ProductTargetSelector() {
   const displayItems = selectedItems.filter((item) => item.type === selected);
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       const shop = app?.config?.shop;
       if (!shop || selectedItems.length === 0 || entries.length === 0) {
         console.error("Missing required data");
+        setIsSaving(false);
         return;
       }
 
@@ -136,24 +146,23 @@ export default function ProductTargetSelector() {
         year: `${entry.from}-${entry.to}`,
         make: entry.make.trim(),
         model: entry.model.trim(),
+        vehicleType: entry.vehicleType,
         products: selectedItems.map((item) => ({
           productId: item.id,
           title: item.title,
         })),
       }));
-      console.log("Payload to save:", payload);
-      console.log("passing data:", JSON.stringify(payload))
 
-      const res = await axios.post("/api/product/add", payload);
+      await axios.post("/api/product/add", payload);
+
       app.toast?.show('Entry Created successfully!');
       router.push('/database');
-
-      console.log("Saved successfully:", res.data);
     } catch (error) {
       console.error("Failed to save:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
-
 
   return (
     <BlockStack gap="400">
@@ -247,15 +256,25 @@ export default function ProductTargetSelector() {
                 />
               </div>
 
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <Select
+                  label="Vehicle Type"
+                  options={vehicleTypeOptions}
+                  onChange={setVehicleType}
+                  value={vehicleType}
+                />
+              </div>
+
               <div style={{ alignSelf: 'end' }}>
                 <Button
                   onClick={() => {
                     const [from, to] = year.split('-');
-                    if (from && to && make && model) {
-                      setEntries((prev) => [...prev, { from, to, make, model }]);
+                    if (from && to && make && model && vehicleType) {
+                      setEntries((prev) => [...prev, { from, to, make, model, vehicleType }]);
                       setYear('');
                       setMake('');
                       setModel('');
+                      setVehicleType('2-wheeler');
                     }
                   }}
                 >
@@ -274,6 +293,7 @@ export default function ProductTargetSelector() {
                     { title: 'To' },
                     { title: 'Make' },
                     { title: 'Model' },
+                    { title: 'Vehicle Type' },
                     { title: 'Actions' },
                   ]}
                 >
@@ -283,6 +303,7 @@ export default function ProductTargetSelector() {
                       <IndexTable.Cell>{item.to}</IndexTable.Cell>
                       <IndexTable.Cell>{item.make}</IndexTable.Cell>
                       <IndexTable.Cell>{item.model}</IndexTable.Cell>
+                      <IndexTable.Cell>{item.vehicleType}</IndexTable.Cell>
                       <IndexTable.Cell>
                         <Button
                           icon={DeleteIcon}
@@ -297,12 +318,11 @@ export default function ProductTargetSelector() {
                   ))}
                 </IndexTable>
               </Card>
-
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="primary" onClick={handleSave}>
-                Save
+              <Button variant="primary" onClick={handleSave} disabled={isSaving} loading={isSaving}>
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </BlockStack>

@@ -1,7 +1,7 @@
 
 import { AxiosRequestHeaders } from "axios";
 import { fetchApi } from "../axios";
-import { queueDelayTime } from "@/app/utils/config/constant";
+import { queueDelayTime } from "@/utils/config/constant";
 import { QstashProps, Error } from "@/types/interfaces";
 import { Client } from "@upstash/qstash";
 import "isomorphic-fetch";

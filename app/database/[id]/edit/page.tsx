@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Page, Card, TextField, Select, BlockStack, InlineStack, Icon, Tabs,
@@ -44,6 +44,7 @@ export default function EditSearchEntryPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { selectedResources, handleSelectionChange } = useIndexResourceState(allFetchedProducts);
 
@@ -136,6 +137,7 @@ export default function EditSearchEntryPage() {
     if (!shop || !id) return;
 
     try {
+      setIsSaving(true);
       const payload = {
         startFrom: yearFrom,
         end: yearTo,
@@ -144,13 +146,14 @@ export default function EditSearchEntryPage() {
         products,
         shop,
       };
-      console.log("payload after deletion:",JSON.stringify(payload));
       const res = await axios.put(`/api/product/${id}`, payload);
       app.toast?.show('Entry updated successfully!');
       router.push('/database');
     } catch (error) {
       console.error('Update failed:', error);
       alert('Failed to update. Check console for details.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -158,7 +161,12 @@ export default function EditSearchEntryPage() {
     <Page
       title="Edit Search Entry"
       backAction={{ content: 'Back', url: '/database' }}
-      primaryAction={{ content: 'Save', onAction: handleSave }}
+      primaryAction={{
+        content: isSaving ? 'Saving...' : 'Save',
+        onAction: handleSave,
+        disabled: isSaving,
+        loading: isSaving,
+      }}
     >
       <Card>
         <BlockStack gap="300">

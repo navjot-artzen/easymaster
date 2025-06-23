@@ -75,6 +75,7 @@ model ProductsEntry {
   end       String
   make      String
   model     String
+  vehicleType   String?  
   shop      String
   products  Product[]
   createdAt DateTime  @default(now())
@@ -88,6 +89,8 @@ model Make {
   id    String    @id @default(auto()) @map("_id") @db.ObjectId
   name  String  @unique
   models Model[]
+  years  YearEntry[]
+
 }
 
 model Model {
@@ -95,5 +98,23 @@ model Model {
   name   String    @unique
   makeId String
   make   Make   @relation(fields: [makeId], references: [id])
+  years  YearEntry[]
   @@unique([name, makeId]) // prevent duplicate models under same make
+}
+model YearEntry {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  from    String
+  to      String
+  makeId  String
+  modelId String
+  make    Make     @relation(fields: [makeId], references: [id])
+  model   Model    @relation(fields: [modelId], references: [id])
+  @@unique([from, to, makeId, modelId])
+}
+
+model CsvFile {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  url       String
+  createdAt DateTime @default(now())
 }
