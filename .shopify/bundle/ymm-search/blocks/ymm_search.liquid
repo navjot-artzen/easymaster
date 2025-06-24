@@ -4,7 +4,7 @@
 <div class="ymm-filter">
  <label class="ymm-title">Search for Parts That Fit Your Vehicle</label>
  <div class="ymm-inner-filter">
-  <select id="ymm-make" class="ymm-dropdown" onchange="handleMakeChange(this.value)">
+  <select id="ymm-make" class="ymm-dropdown">
     <option value="">- Make -</option>
     {% comment %} These would typically come from your vehicle data {% endcomment %}
     <option value="Toyota">Toyota</option>
@@ -27,106 +27,86 @@
 </div>
 
 <script>
-  // This data would typically come from your backend or a global variable
-  const ymmData = {
-    Toyota: {
-      Corolla: [2020, 2021, 2022],
-      Camry: [2019, 2020, 2021],
-      RAV4: [2020, 2021, 2022, 2023]
-    },
-    Tata: {
-      Curve: [2020, 2021, 2022],
-      Nano: [2010, 2011, 2012, 2013],
-      Altroz: [2020, 2021, 2022, 2023]
-    },
-    Honda: {
-      Civic: [2020, 2021, 2022],
-      Accord: [2019, 2020, 2021],
-      CRV: [2021, 2022, 2023]
-    },
-    Ford: {
-      F150: [2019, 2020, 2021, 2022],
-      Mustang: [2020, 2021, 2022],
-      Explorer: [2021, 2022, 2023]
-    }
-  };
+  let ymmData = {}; // Store make-model mapping
 
-  function handleMakeChange(make) {
-    const modelSelect = document.getElementById('ymm-model');
-    const yearSelect = document.getElementById('ymm-year');
-    
-    // Reset model and year dropdowns
-    modelSelect.innerHTML = '<option value="">- Model -</option>';
+  document.addEventListener("DOMContentLoaded", async () => {
+    const makeSelect = document.getElementById("ymm-make");
+    const modelSelect = document.getElementById("ymm-model");
+    const yearSelect = document.getElementById("ymm-year");
+
+    // Populate years (2000 to 2025)
     yearSelect.innerHTML = '<option value="">- Year -</option>';
-    yearSelect.disabled = true;
-
-    if (!make || !ymmData[make]) {
-      modelSelect.disabled = true;
-      return;
+    for (let year = 2000; year <= 2025; year++) {
+      yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
     }
 
-    // Enable and populate model dropdown
-    modelSelect.disabled = false;
-    Object.keys(ymmData[make]).forEach(model => {
-      modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
+    // Fetch make-model data from API
+    try {
+      const res = await fetch("https://esaymaster.vercel.app/api/make-model");
+      const data = await res.json();
+      console.log("data",data)
+      ymmData = {};
+
+      // Populate Make dropdown and build ymmData map
+      makeSelect.innerHTML = '<option value="">- Make -</option>';
+      data.makes.forEach((make) => {
+        ymmData[make.name] = make.models.map((model) => model.name);
+        makeSelect.innerHTML += `<option value="${make.name}">${make.name}</option>`;
+      });
+    } catch (error) {
+      console.error("Error fetching vehicle data:", error);
+    }
+
+    makeSelect.addEventListener("change", () => {
+      const selectedMake = makeSelect.value;
+      modelSelect.innerHTML = '<option value="">- Model -</option>';
+      modelSelect.disabled = true;
+      yearSelect.value = '';
+      yearSelect.disabled = true;
+
+      if (!selectedMake || !ymmData[selectedMake]) return;
+
+      // Populate Model dropdown
+      ymmData[selectedMake].forEach((model) => {
+        modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
+      });
+      modelSelect.disabled = false;
     });
 
-    // Update year dropdown when model changes
-    modelSelect.onchange = function() {
-      const selectedModel = this.value;
-      yearSelect.innerHTML = '<option value="">- Year -</option>';
-      
-      if (!selectedModel) {
+    modelSelect.addEventListener("change", () => {
+      if (modelSelect.value) {
+        yearSelect.disabled = false;
+      } else {
+        yearSelect.value = '';
         yearSelect.disabled = true;
-        return;
       }
+    });
+  });
 
-      yearSelect.disabled = false;
-      ymmData[make][selectedModel].forEach(year => {
-        yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
-      });
-    };
-  }
-
-function handleSearch() {
+  function handleSearch() {
     const make = document.getElementById('ymm-make').value;
     const model = document.getElementById('ymm-model').value;
     const year = document.getElementById('ymm-year').value;
 
-    if (!make) {
-        alert('Please select a make');
-        return;
-    }
+    if (!make) return alert('Please select a make');
+    if (!model) return alert('Please select a model');
+    if (!year) return alert('Please select a year');
 
-    // Basic validation
-    if (!model) {
-        alert('Please select a model');
-        return;
-    }
-    
-    if (!year) {
-        alert('Please select a year');
-        return;
-    }
-
-    // Clean and format the values
     const cleanMake = make.trim().replace(/\s+/g, '-').toLowerCase();
     const cleanModel = model.trim().replace(/\s+/g, '-').toLowerCase();
     const cleanYear = year.toString().trim();
 
-    // Build the URL path
     const vehiclePath = `${cleanMake}-${cleanModel}-${cleanYear}`;
     const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
-    
-    // Redirect to the collection with vehicle filter
+
     window.location.href = `/collections/${defaultCollection}/${vehiclePath}`;
-}
+  }
 
   function clearFilters() {
     document.getElementById('ymm-make').selectedIndex = 0;
     document.getElementById('ymm-model').innerHTML = '<option value="">- Model -</option>';
     document.getElementById('ymm-model').disabled = true;
-    document.getElementById('ymm-year').innerHTML = '<option value="">- Year -</option>';
+    document.getElementById('ymm-year').value = '';
     document.getElementById('ymm-year').disabled = true;
   }
 </script>

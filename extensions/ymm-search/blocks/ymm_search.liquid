@@ -44,6 +44,7 @@
     try {
       const res = await fetch("https://esaymaster.vercel.app/api/make-model");
       const data = await res.json();
+      console.log("data",data)
       ymmData = {};
 
       // Populate Make dropdown and build ymmData map

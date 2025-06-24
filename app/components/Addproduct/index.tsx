@@ -46,10 +46,9 @@ export default function ProductTargetSelector() {
   const [model, setModel] = useState('');
   const [vehicleType, setVehicleType] = useState('2-wheeler');
   const [isSaving, setIsSaving] = useState(false);
-
   const [entries, setEntries] = useState<{ from: string; to: string; make: string; model: string; vehicleType: string }[]>([]);
-  const router = useRouter();
 
+  const router = useRouter();
   const app = useAppBridge();
 
   const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => {
@@ -166,6 +165,11 @@ export default function ProductTargetSelector() {
 
   return (
     <BlockStack gap="400">
+      {/* Back button */}
+      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <Button onClick={() => router.push('/database')}>Back</Button>
+      </div>
+
       <Card padding="600">
         <BlockStack gap="400">
           <InlineStack gap="400">
@@ -336,15 +340,15 @@ export default function ProductTargetSelector() {
         primaryAction={{
           content: 'Add',
           onAction: () => {
-            const selectedData = products.filter((product) =>
-              selectedResources.includes(product.id)
-            ).map(p => ({
-              ...(p as { id: string; title: string }),
-              type: selected,
-            }));
+            const selectedData = products
+              .filter((product) => selectedResources.includes(product.id))
+              .map((p) => ({
+                ...(p as { id: string; title: string }),
+                type: selected,
+              }));
 
-            setSelectedItems(prev => [
-              ...prev.filter(item => item.type !== selected),
+            setSelectedItems((prev) => [
+              ...prev.filter((item) => item.type !== selected),
               ...selectedData,
             ]);
             setModalOpen(false);
@@ -376,7 +380,21 @@ export default function ProductTargetSelector() {
                   selected={selectedResources.includes(id)}
                   position={index}
                 >
-                  <IndexTable.Cell>{title}</IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <span
+                      title={title}
+                      style={{
+                        display: 'inline-block',
+                        maxWidth: '200px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      {title}
+                    </span>
+                  </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
             </IndexTable>

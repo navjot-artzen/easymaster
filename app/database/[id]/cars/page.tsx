@@ -10,7 +10,7 @@ import {
   InlineStack,
   Pagination,
 } from '@shopify/polaris';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface CarEntry {
@@ -33,7 +33,7 @@ export default function ProductCarsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
-
+  const router =useRouter()
   useEffect(() => {
     const fetchCars = async () => {
       try {
@@ -62,7 +62,10 @@ export default function ProductCarsPage() {
   });
 
   return (
-    <Page title={productTitle || 'Product Cars'}>
+    <Page title={productTitle || 'Product Cars'}
+          backAction={{ content: 'Back', onAction: () => router.push('/database') }}
+
+    >
       <BlockStack gap="400">
         {/* <InlineStack align="start">
           <div style={{ maxWidth: 250 }}>

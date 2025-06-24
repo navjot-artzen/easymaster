@@ -8,7 +8,6 @@ import {
   Spinner,
   BlockStack,
   Button,
-  Select,
   Pagination,
   InlineStack,
 } from '@shopify/polaris';
@@ -42,15 +41,12 @@ interface FlatProductRow {
 export default function SearchEntryListPage() {
   const [entries, setEntries] = useState<ProductEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState('ALL');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const limit = 10;
 
   const router = useRouter();
   const app = useAppBridge();
-
-  const normalize = (str: string) => str?.toLowerCase().replace(/[\s-]/g, '');
 
   useEffect(() => {
     const shop = app?.config?.shop;
@@ -86,15 +82,10 @@ export default function SearchEntryListPage() {
     }))
   );
 
-  const filteredRows = flatRows.filter((row) => {
-    if (filterType === 'ALL') return true;
-    return normalize(row.vehicleType || '') === normalize(filterType);
-  });
-
   const totalPages = Math.ceil(totalCount / limit);
 
   return (
-  <Page
+    <Page
       title="Search entries & results"
       primaryAction={
         <InlineStack gap="400">
@@ -104,19 +95,7 @@ export default function SearchEntryListPage() {
           </Button>
         </InlineStack>
       }
-    > {/* <div style={{ maxWidth: 250, marginBottom: 16 }}>
-        <Select
-          label="Filter by Vehicle Type"
-          options={[
-            { label: 'All', value: 'ALL' },
-            { label: '2 Wheeler', value: '2 Wheeler' },
-            { label: '4 Wheeler', value: '4-wheeler' },
-          ]}
-          onChange={(value) => setFilterType(value)}
-          value={filterType}
-        />
-      </div> */}
-
+    >
       <Card>
         {loading ? (
           <BlockStack align="center" inlineAlign="center" gap="400">
@@ -126,7 +105,7 @@ export default function SearchEntryListPage() {
           <>
             <IndexTable
               resourceName={{ singular: 'product', plural: 'products' }}
-              itemCount={filteredRows.length}
+              itemCount={flatRows.length}
               selectable={false}
               headings={[
                 { title: 'Product Title' },
@@ -137,7 +116,7 @@ export default function SearchEntryListPage() {
                 { title: 'Edit' },
               ]}
             >
-              {filteredRows.map((row, index) => (
+              {flatRows.map((row, index) => (
                 <IndexTable.Row
                   id={`${row.entryId}-${index}`}
                   key={`${row.entryId}-${index}`}
@@ -148,9 +127,18 @@ export default function SearchEntryListPage() {
                       href={`https://${app?.config?.shop}/admin/products/${row.legacyResourceId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#1a73e8', textDecoration: 'underline' }}
+                      style={{
+                        color: '#1a73e8',
+                        textDecoration: 'underline',
+                        display: 'inline-block',
+                        maxWidth: '200px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                      title={row.productTitle}
                     >
-                      {row.productTitle}
+                      {row.productTitle.length > 20 ? row.productTitle.slice(0, 20) + '…' : row.productTitle}
                     </a>
                   </IndexTable.Cell>
                   <IndexTable.Cell>{row.make}</IndexTable.Cell>
@@ -180,14 +168,16 @@ export default function SearchEntryListPage() {
             </IndexTable>
 
             {/* Pagination Controls */}
-            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
-              <Pagination
-                hasPrevious={page > 1}
-                onPrevious={() => setPage((prev) => Math.max(prev - 1, 1))}
-                hasNext={page < totalPages}
-                onNext={() => setPage((prev) => prev + 1)}
-              />
-            </div>
+            {totalPages > 1 && (
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Pagination
+                  hasPrevious={page > 1}
+                  onPrevious={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  hasNext={page < totalPages}
+                  onNext={() => setPage((prev) => prev + 1)}
+                />
+              </div>
+            )}
           </>
         )}
       </Card>

@@ -69,17 +69,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'Missing shop parameter.' }, { status: 400 });
   }
 
-  const lastFile = await prisma.csvFile.findFirst({
+  const files = await prisma.csvFile.findMany({
     where: { shop },
     orderBy: { createdAt: 'desc' },
   });
 
-  if (!lastFile) {
-    return NextResponse.json({ message: 'No file found for this shop.' }, { status: 404 });
+  if (!files || files.length === 0) {
+    return NextResponse.json({ message: 'No files found for this shop.' }, { status: 404 });
   }
 
-  return NextResponse.json({
-    name: lastFile.name,
-    url: lastFile.url,
-  });
+  const response = files.map((file) => ({
+    name: file.name,
+    url: file.url,
+  }));
+
+  return NextResponse.json(response);
 }

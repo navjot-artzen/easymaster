@@ -13,43 +13,54 @@ import {
     SkeletonBodyText,
     SkeletonDisplayText,
     Spinner,
+    IndexTable,
 } from '@shopify/polaris';
 import { useSearchParams } from 'next/navigation';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { useRouter } from 'next/navigation';
 
-function UploadForm() {
+function UploadForm({ visible }: { visible: boolean }) {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [loading, setLoading] = useState(true); // Loader for fetching latest upload
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [uploadedFileInfo, setUploadedFileInfo] = useState<null | {
+    const [uploadedFiles, setUploadedFiles] = useState<{
         fileName: string;
         url: string;
         description: string;
-    }>(null);
-
-    const searchParams = useSearchParams();
-    const shop = searchParams.get('shop');
+    }[]>([]);
+    const app = useAppBridge();
 
     useEffect(() => {
+        const shop = app?.config?.shop;
         if (shop) {
             setLoading(true);
             fetch(`/api/upload-csv?shop=${shop}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data?.url) {
-                        setUploadedFileInfo({
-                            fileName: data.name,
-                            url: data.url,
-                            description: generateDescription(data.name),
-                        });
+                .then((res) => res.json())
+                .then((data) => {
+                    if (Array.isArray(data)) {
+                        const files = data.map((d) => ({
+                            fileName: d.name,
+                            url: d.url,
+                            description: generateDescription(d.name),
+                        }));
+                        setUploadedFiles(files);
+                    } else if (data?.url) {
+                        setUploadedFiles([
+                            {
+                                fileName: data.name,
+                                url: data.url,
+                                description: generateDescription(data.name),
+                            },
+                        ]);
                     }
                 })
                 .finally(() => setLoading(false));
         } else {
             setLoading(false);
         }
-    }, [shop]);
+    }, [app]);
 
     const handleDropZoneDrop = (_dropFiles: File[], acceptedFiles: File[]) => {
         const selected = acceptedFiles[0];
@@ -68,6 +79,7 @@ function UploadForm() {
     };
 
     const handleUpload = async () => {
+        const shop = app?.config?.shop;
         if (!file || !shop) {
             setError('Missing file or shop information.');
             return;
@@ -76,7 +88,6 @@ function UploadForm() {
         setUploading(true);
         setError('');
         setSuccess('');
-        setUploadedFileInfo(null);
 
         const formData = new FormData();
         formData.append('file', file);
@@ -91,11 +102,14 @@ function UploadForm() {
             const result = await res.json();
 
             if (res.ok) {
-                setUploadedFileInfo({
-                    fileName: result.name,
-                    url: result.url,
-                    description: generateDescription(result.name),
-                });
+                setUploadedFiles((prev) => [
+                    {
+                        fileName: result.name,
+                        url: result.url,
+                        description: generateDescription(result.name),
+                    },
+                    ...prev,
+                ]);
                 setSuccess('CSV file uploaded successfully.');
                 setFile(null);
             } else {
@@ -120,52 +134,85 @@ function UploadForm() {
         );
     }
 
-    return uploadedFileInfo ? (
-        <Card>
-            <BlockStack gap="400">
-                <Text variant="headingLg" as="h2">
-            📥 Here&apos;s What You Just Uploaded
-                </Text>
-                <Text variant="headingMd" as="h3">
-                    {uploadedFileInfo.fileName}
-                </Text>
-                <Text as="p" variant="bodyLg">
-                    {uploadedFileInfo.description}
-                </Text>
-                <InlineStack>
-                    <Button url={uploadedFileInfo.url} target="_blank" external>
-                        View File
-                    </Button>
-                </InlineStack>
-            </BlockStack>
-        </Card>
-    ) : (
-        <Card>
-            <BlockStack gap="400">
-                <DropZone accept=".csv" onDrop={handleDropZoneDrop}>
-                    {file ? (
-                        <Text as="p" variant="bodyMd">
-                            {file.name}
-                        </Text>
-                    ) : (
-                        <DropZone.FileUpload />
-                    )}
-                </DropZone>
-                {error && <Banner tone="critical" title="Error">{error}</Banner>}
-                {success && <Banner tone="success" title="Success">{success}</Banner>}
-                <Button onClick={handleUpload} disabled={!file || uploading} loading={uploading}>
-                    Upload CSV
-                </Button>
-            </BlockStack>
-        </Card>
+    return (
+        <BlockStack gap="400">
+            <Text variant="headingMd" as="h2">
+                Welcome to the Eparts master CSV importer!
+            </Text>
+            {uploadedFiles.length > 0 && (
+                <Card>
+                    <IndexTable
+                        resourceName={{ singular: 'file', plural: 'files' }}
+                        itemCount={uploadedFiles.length}
+                        headings={[
+                            { title: 'File Name' },
+                            { title: 'Description' },
+                            { title: 'Action' },
+                        ]}
+                        selectable={false}
+                    >
+                        {uploadedFiles.map((file, index) => (
+                            <IndexTable.Row
+                                id={file.fileName}
+                                key={file.fileName}
+                                position={index}
+                            >
+                                <IndexTable.Cell>{file.fileName}</IndexTable.Cell>
+                                <IndexTable.Cell>{file.description}</IndexTable.Cell>
+                                <IndexTable.Cell>
+                                    <Button
+                                        url={file.url}
+                                        target="_blank"
+                                        external
+                                        size="slim"
+                                    >
+                                        View
+                                    </Button>
+                                </IndexTable.Cell>
+                            </IndexTable.Row>
+                        ))}
+                    </IndexTable>
+                </Card>
+            )}
+            {visible && (
+                <Card>
+                    <BlockStack gap="400">
+                        <DropZone accept=".csv" onDrop={handleDropZoneDrop}>
+                            {file ? (
+                                <Text as="p" variant="bodyMd">
+                                    {file.name}
+                                </Text>
+                            ) : (
+                                <DropZone.FileUpload actionHint="Drop CSV file here or click to upload" />
+                            )}
+                        </DropZone>
+                        {error && <Banner tone="critical" title="Error">{error}</Banner>}
+                        {success && <Banner tone="success" title="Success">{success}</Banner>}
+                        <Button onClick={handleUpload} disabled={!file || uploading} loading={uploading}>
+                            Upload CSV
+                        </Button>
+                    </BlockStack>
+                </Card>
+            )}
+        </BlockStack>
     );
 }
 
 export default function UploadCsvPage() {
+    const router = useRouter();
+    const [formVisible, setFormVisible] = useState(false);
+
     return (
-        <Page title="Upload CSV File">
+        <Page
+            title="Upload CSV File"
+            backAction={{ content: 'Back', onAction: () => router.push('/database') }}
+            primaryAction={{
+                content: 'New File',
+                onAction: () => setFormVisible(true),
+            }}
+        >
             <Suspense fallback={<div>Loading...</div>}>
-                <UploadForm />
+                <UploadForm visible={formVisible} />
             </Suspense>
         </Page>
     );
