@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const id = params.id;
     const body = await req.json();
-    const { startFrom, end, make, model, products, shop } = body;
+    const { startFrom, end, make, model, products,vehicleType, shop } = body;
 
     const session = await findSessionByShop(shop);
     if (!session) {
@@ -65,6 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         end,
         make,
         model,
+        vehicleType, // ✅ Add this line
         products: retainedProducts as any[], // ensure it’s typed as a valid Prisma JSON array
         updatedAt: new Date(),
       },
@@ -173,9 +174,3 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Failed to update entry.', error: error.message }, { status: 500 });
   }
 }
-
-
-
-
-
-

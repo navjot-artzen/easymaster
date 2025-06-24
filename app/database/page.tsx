@@ -39,7 +39,7 @@ interface FlatProductRow {
 }
 
 export default function SearchEntryListPage() {
-  const [entries, setEntries] = useState<ProductEntry[]>([]);
+  const [entries, setEntries] = useState<FlatProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -58,6 +58,7 @@ export default function SearchEntryListPage() {
         const res = await fetch(`/api/product?shop=${shop}&page=${page}&limit=${limit}`);
         if (!res.ok) throw new Error('Failed to fetch entries');
         const { entries, totalCount } = await res.json();
+        console.log(entries, totalCount ,"entries, totalCount ")
         setEntries(entries);
         setTotalCount(totalCount);
       } catch (error) {
@@ -69,21 +70,22 @@ export default function SearchEntryListPage() {
 
     fetchEntries();
   }, [app, page]);
-
-  const flatRows: FlatProductRow[] = entries.flatMap((entry) =>
-    entry.products.map((product) => ({
-      entryId: entry.id,
-      productTitle: product.title,
-      make: entry.make,
-      model: entry.model,
-      year: `${entry.startFrom} - ${entry.end}`,
-      legacyResourceId: product.legacyResourceId,
-      vehicleType: entry.vehicleType || 'ALL',
-    }))
-  );
+  console.log(entries, page ,"entries, page ")
+  const flatRows = entries || []
+  // const flatRows: FlatProductRow[] = entries.flatMap((entry) =>
+  //   entry.products.map((product) => ({
+  //     entryId: entry.id,
+  //     productTitle: product.title,
+  //     make: entry.make,
+  //     model: entry.model,
+  //     year: `${entry.startFrom} - ${entry.end}`,
+  //     legacyResourceId: product.legacyResourceId,
+  //     vehicleType: entry.vehicleType || 'ALL',
+  //   }))
+  // );
 
   const totalPages = Math.ceil(totalCount / limit);
-
+ 
   return (
     <Page
       title="Search entries & results"
@@ -112,6 +114,7 @@ export default function SearchEntryListPage() {
                 { title: 'Company' },
                 { title: 'Car Name' },
                 { title: 'Year' },
+                { title: 'Vehicle_Type' },
                 { title: 'View' },
                 { title: 'Edit' },
               ]}
@@ -144,6 +147,11 @@ export default function SearchEntryListPage() {
                   <IndexTable.Cell>{row.make}</IndexTable.Cell>
                   <IndexTable.Cell>{row.model}</IndexTable.Cell>
                   <IndexTable.Cell>{row.year}</IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {row.vehicleType
+                      ? row.vehicleType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
+                      : '-'}
+                  </IndexTable.Cell>
                   <IndexTable.Cell>
                     <Button
                       onClick={() =>

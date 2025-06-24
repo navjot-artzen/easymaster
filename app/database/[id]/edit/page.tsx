@@ -26,6 +26,7 @@ interface EntryData {
   end: string;
   make: string;
   model: string;
+  vehicleType: string;
   products: Product[];
 }
 
@@ -38,6 +39,7 @@ export default function EditSearchEntryPage() {
   const [yearTo, setYearTo] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
+  const [vehicleType, setVehicleType] = useState('2-wheeler');
   const [products, setProducts] = useState<Product[]>([]);
   const [allFetchedProducts, setAllFetchedProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +55,11 @@ export default function EditSearchEntryPage() {
     return { label: value, value };
   });
 
+  const vehicleOptions = [
+    { label: '2-wheeler', value: '2-wheeler' },
+    { label: '4-wheeler', value: '4-wheeler' },
+  ];
+
   useEffect(() => {
     if (!id) return;
     setLoadingEntry(true);
@@ -64,6 +71,7 @@ export default function EditSearchEntryPage() {
         setYearTo(data.end);
         setMake(data.make);
         setModel(data.model);
+        setVehicleType(data.vehicleType || '2-wheeler');
         setProducts(data.products || []);
       })
       .catch((err) => console.error('Error fetching entry:', err))
@@ -143,6 +151,7 @@ export default function EditSearchEntryPage() {
         end: yearTo,
         make,
         model,
+        vehicleType,
         products,
         shop,
       };
@@ -181,6 +190,7 @@ export default function EditSearchEntryPage() {
               <Select label="Year To" options={yearOptions} value={yearTo} onChange={setYearTo} />
               <TextField label="Make" value={make} onChange={setMake} autoComplete='off' />
               <TextField label="Model" value={model} onChange={setModel} autoComplete='off' />
+              <Select label="Vehicle Type" options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />
             </InlineStack>
           )}
         </BlockStack>
