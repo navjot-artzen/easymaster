@@ -9,10 +9,16 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
+
   const file = formData.get('file') as File;
+  const shop = formData.get('shop') as string | null;
 
   if (!file || file.type !== 'text/csv') {
     return NextResponse.json({ message: 'Only CSV files are allowed.' }, { status: 400 });
+  }
+
+  if (!shop) {
+    return NextResponse.json({ message: 'Missing shop information.' }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -43,8 +49,37 @@ export async function POST(req: NextRequest) {
     data: {
       name: file.name,
       url: publicUrl || '',
+      shop: shop,
     },
   });
 
-  return NextResponse.json({ message: 'Upload successful', url: publicUrl });
+  return NextResponse.json({
+    message: 'Upload successful',
+    name: file.name,
+    url: publicUrl,
+  });
+}
+
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const shop = searchParams.get('shop');
+
+  if (!shop) {
+    return NextResponse.json({ message: 'Missing shop parameter.' }, { status: 400 });
+  }
+
+  const lastFile = await prisma.csvFile.findFirst({
+    where: { shop },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!lastFile) {
+    return NextResponse.json({ message: 'No file found for this shop.' }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    name: lastFile.name,
+    url: lastFile.url,
+  });
 }
