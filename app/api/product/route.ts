@@ -1,8 +1,8 @@
-// // --- UPDATED API WITH PAGINATION ---
-// import { NextRequest, NextResponse } from 'next/server';
-// import prisma from '@/lib/prisma';
+// --- UPDATED API WITH PAGINATION ---
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
-// export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 // export async function GET(req: NextRequest) {
 //   try {
@@ -51,12 +51,6 @@
 //     );
 //   }
 // }
-
-
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {

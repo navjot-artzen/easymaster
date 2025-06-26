@@ -3,6 +3,7 @@
 import { GET_PRODUCTS_QUERY } from '@/lib/graphql/queries';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import {
+  Page,
   Card,
   Text,
   BlockStack,
@@ -14,39 +15,54 @@ import {
   Modal,
   IndexTable,
   useIndexResourceState,
+  FormLayout,
 } from '@shopify/polaris';
 import {
-  CollectionIcon,
   DeleteIcon,
-  ProductAddIcon,
+  EditIcon,
   SearchListIcon,
 } from '@shopify/polaris-icons';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 
-type Product = {
+interface Product {
   id: string;
   title: string;
-};
+  type?: string;
+  [key: string]: unknown; // ✅ index signature to satisfy Polaris type
+}
 
-type ProductEdge = {
-  node: Product;
-};
+interface Entry {
+  from: string;
+  to: string;
+  make: string;
+  model: string;
+  vehicleType: string;
+}
 
+interface ValidationErrors {
+  yearFrom?: string;
+  yearTo?: string;
+  make?: string;
+  model?: string;
+  vehicleType?: string;
+}
 export default function ProductTargetSelector() {
-  const [selected, setSelected] = useState<'products' | 'collection'>('products');
-  const [showForm, setShowForm] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Product[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItems, setSelectedItems] = useState<{ id: string; title: string; type: string }[]>([]);
   const [year, setYear] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
-  const [vehicleType, setVehicleType] = useState('2-wheeler');
+  const [vehicleType, setVehicleType] = useState<'2-wheeler' | '4-wheeler'>('2-wheeler');
   const [isSaving, setIsSaving] = useState(false);
-  const [entries, setEntries] = useState<{ from: string; to: string; make: string; model: string; vehicleType: string }[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const router = useRouter();
   const app = useAppBridge();
@@ -61,38 +77,73 @@ export default function ProductTargetSelector() {
     { label: '4-wheeler', value: '4-wheeler' },
   ];
 
-  const Tile = ({
-    label,
-    icon,
-    active,
-    onClick,
-  }: {
-    label: string;
-    icon: any;
-    active: boolean;
-    onClick: () => void;
-  }) => (
-    <div
-      onClick={onClick}
-      style={{
-        flex: 1,
-        border: active ? '2px solid black' : '1px solid #dcdcdc',
-        borderRadius: '8px',
-        backgroundColor: active ? 'white' : '#f6f6f7',
-        padding: '24px 0',
-        cursor: 'pointer',
-        textAlign: 'center',
-      }}
-    >
-      <Icon source={icon} tone="base" />
-      <Text as="p" alignment="center" tone="subdued">
-        {label}
-      </Text>
-    </div>
-  );
+ const validateFields = (): boolean => {
+  const errors: ValidationErrors = {};
+  const [from, to] = year.split('-');
+
+  if (!from) errors.yearFrom = 'Select from year';
+  if (!to) errors.yearTo = 'Select to year';
+
+  const fromYear = parseInt(from, 10);
+  const toYear = parseInt(to, 10);
+
+  if (from && to && fromYear > toYear) {
+    errors.yearFrom = 'From year must be less than or equal to To year';
+    errors.yearTo = 'To year must be greater than or equal to From year';
+  }
+
+  if (!make.trim()) errors.make = 'Enter make';
+  if (!model.trim()) errors.model = 'Enter model';
+  if (!vehicleType) errors.vehicleType = 'Select vehicle type';
+
+  setValidationErrors(errors);
+  return Object.keys(errors).length === 0;
+};
+
+
+  const handleAddEntry = () => {
+    if (!validateFields()) return;
+    const [from, to] = year.split('-');
+    setEntries((prev) => [...prev, { from, to, make, model, vehicleType }]);
+    setYear('');
+    setMake('');
+    setModel('');
+    setVehicleType('2-wheeler');
+    setValidationErrors({});
+  };
+
+  const handleEditSave = () => {
+    if (!validateFields()) return;
+    const [from, to] = year.split('-');
+    const updated: Entry = { from, to, make, model, vehicleType };
+    setEntries((prev) => prev.map((e, i) => (i === editIndex ? updated : e)));
+    setEditModalOpen(false);
+    setEditIndex(null);
+    setYear('');
+    setMake('');
+    setModel('');
+    setVehicleType('2-wheeler');
+    setValidationErrors({});
+  };
+
+  const openEditModal = (index: number) => {
+    const item = entries[index];
+    setYear(`${item.from}-${item.to}`);
+    setMake(item.make);
+    setModel(item.model);
+    setVehicleType(item.vehicleType as '2-wheeler' | '4-wheeler');
+    setEditIndex(index);
+    setEditModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!validateFields()) return;
+    setIsSaving(true);
+    setTimeout(() => setIsSaving(false), 1000);
+  };
 
   useEffect(() => {
-    const shop = app?.config?.shop;
+    const shop = (app as any)?.config?.shop;
     if (!shop) return;
 
     async function fetchProducts() {
@@ -100,13 +151,11 @@ export default function ProductTargetSelector() {
         const res = await axios.post(`/api/getproduct?shop=${shop}`, {
           query: GET_PRODUCTS_QUERY,
         });
-
-        const productEdges = res.data?.data?.products?.edges as ProductEdge[];
-        const productNodes = productEdges?.map((edge) => ({
+        const productEdges = res.data?.data?.products?.edges || [];
+        const productNodes: Product[] = productEdges.map((edge: any) => ({
           id: edge.node.id,
           title: edge.node.title,
-        })) || [];
-
+        }));
         setProducts(productNodes);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -126,281 +175,185 @@ export default function ProductTargetSelector() {
     selectedResources,
     allResourcesSelected,
     handleSelectionChange,
-  } = useIndexResourceState(products);
+  } = useIndexResourceState<Product>(products);
 
-  const displayItems = selectedItems.filter((item) => item.type === selected);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const shop = app?.config?.shop;
-      if (!shop || selectedItems.length === 0 || entries.length === 0) {
-        console.error("Missing required data");
-        setIsSaving(false);
-        return;
-      }
-
-      const payload = entries.map((entry) => ({
-        shop,
-        year: `${entry.from}-${entry.to}`,
-        make: entry.make.trim(),
-        model: entry.model.trim(),
-        vehicleType: entry.vehicleType,
-        products: selectedItems.map((item) => ({
-          productId: item.id,
-          title: item.title,
-        })),
-      }));
-
-      await axios.post("/api/product/add", payload);
-
-      app.toast?.show('Entry Created successfully!');
-      router.push('/database');
-    } catch (error) {
-      console.error("Failed to save:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
-    <BlockStack gap="400">
-      {/* Back button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-        <Button onClick={() => router.push('/database')}>Back</Button>
-      </div>
-
-      <Card padding="600">
+    <Page
+      title="Product Target Selector"
+      backAction={{ content: 'Back', onAction: () => router.push('/database') }}
+    >
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <BlockStack gap="400">
-          <InlineStack gap="400">
-            <Tile
-              label="Products"
-              icon={ProductAddIcon}
-              active={selected === 'products'}
-              onClick={() => setSelected('products')}
-            />
-            <Tile
-              label="Collection"
-              icon={CollectionIcon}
-              active={selected === 'collection'}
-              onClick={() => setSelected('collection')}
-            />
-          </InlineStack>
-
-          {displayItems.length === 0 ? (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              No {selected} associated with the search rule
-            </Text>
-          ) : (
-            <BlockStack gap="200">
-              <Text as="h3" variant="headingSm">Selected {selected}</Text>
-              {displayItems.map((item) => (
-                <Text as="p" key={item.id}>{item.title}</Text>
-              ))}
+          <Card padding="600">
+            <BlockStack gap="400">
+              <Text as='p' variant="headingSm">Selected Products</Text>
+              {selectedItems.length === 0 ? (
+                <Text as='p' tone="subdued">No products associated with the search rule</Text>
+              ) : (
+                selectedItems.map((item) => (
+                  <Text as='p' key={item.id}>{item.title}</Text>
+                ))
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button onClick={() => setModalOpen(true)} disabled={showForm}>
+                  {selectedItems.length > 0 ? 'Add More Products' : 'Add Products'}
+                </Button>
+                {!showForm && selectedItems.length > 0 && (
+                  <Button onClick={() => setShowForm(true)} variant="primary" size="slim">
+                    Continue
+                  </Button>
+                )}
+              </div>
             </BlockStack>
+          </Card>
+
+          {showForm && (
+            <Card padding="400">
+              <BlockStack gap="200">
+                <InlineStack gap="300" wrap={false}>
+                  <div style={{ minWidth: '120px' }}>
+                    <Select label="From Year" options={yearOptions} value={year.split('-')[0] || ''} onChange={(val) => setYear(`${val}-${year.split('-')[1] || val}`)} error={validationErrors.yearFrom} />
+                  </div>
+                  <div style={{ minWidth: '120px' }}>
+                    <Select label="To Year" options={yearOptions} value={year.split('-')[1] || ''} onChange={(val) => setYear(`${year.split('-')[0] || val}-${val}`)} error={validationErrors.yearTo} />
+                  </div>
+                  <div style={{ minWidth: '110px' }}>
+                    <TextField label="Make" value={make} onChange={setMake} autoComplete="off" placeholder="e.g. Honda" error={validationErrors.make} />
+                  </div>
+                  <div style={{ minWidth: '110px' }}>
+                    <TextField label="Model" value={model} onChange={setModel} autoComplete="off" placeholder="e.g. Civic" error={validationErrors.model} />
+                  </div>
+                  <div style={{ minWidth: '120px' }}>
+                    <Select label="Vehicle Type" options={vehicleTypeOptions} value={vehicleType} onChange={(selected) => setVehicleType(selected as '2-wheeler' | '4-wheeler')} error={validationErrors.vehicleType} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: Object.keys(validationErrors).length === 0 ? 'flex-end' : '' }}>
+                    <Button onClick={handleAddEntry} size="slim" variant="tertiary">
+                      Add More
+                    </Button>
+                  </div>
+                </InlineStack>
+
+                {entries.length > 0 && (
+                  <Card>
+                    <IndexTable
+                      resourceName={{ singular: 'entry', plural: 'entries' }}
+                      itemCount={entries.length}
+                      headings={[
+                        { title: 'From' },
+                        { title: 'To' },
+                        { title: 'Make' },
+                        { title: 'Model' },
+                        { title: 'Vehicle Type' },
+                        { title: 'Actions' },
+                      ]}
+                    >
+                      {entries.map((item, index) => (
+                        <IndexTable.Row id={`${index}`} key={index} position={index}>
+                          <IndexTable.Cell>{item.from}</IndexTable.Cell>
+                          <IndexTable.Cell>{item.to}</IndexTable.Cell>
+                          <IndexTable.Cell>{item.make}</IndexTable.Cell>
+                          <IndexTable.Cell>{item.model}</IndexTable.Cell>
+                          <IndexTable.Cell>{item.vehicleType}</IndexTable.Cell>
+                          <IndexTable.Cell>
+                            <InlineStack>
+                              <Button icon={EditIcon} variant="tertiary" onClick={() => openEditModal(index)} />
+                              <Button icon={DeleteIcon} variant="tertiary" onClick={() => setEntries((prev) => prev.filter((_, i) => i !== index))} />
+                            </InlineStack>
+                          </IndexTable.Cell>
+                        </IndexTable.Row>
+                      ))}
+                    </IndexTable>
+                  </Card>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button variant="primary" onClick={handleSave} disabled={isSaving} loading={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              </BlockStack>
+            </Card>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="primary" onClick={() => setModalOpen(true)}>
-              {selected === 'products' ? 'Add Products' : 'Add Collection'}
-            </Button>
-          </div>
-        </BlockStack>
-      </Card>
-
-      {!showForm && selectedItems.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <Button onClick={() => setShowForm(true)}>Save Changes</Button>
-        </div>
-      )}
-
-      {showForm && (
-        <Card padding="400">
-          <BlockStack gap="400">
-            <InlineStack gap="300" wrap>
-              <div style={{ flex: 1, minWidth: '150px' }}>
-                <Select
-                  label="From Year"
-                  options={yearOptions}
-                  onChange={(val) =>
-                    setYear((prev) => `${val}-${prev.split('-')[1] || val}`)
-                  }
-                  value={year.split('-')[0] || ''}
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: '150px' }}>
-                <Select
-                  label="To Year"
-                  options={yearOptions}
-                  onChange={(val) =>
-                    setYear((prev) => `${prev.split('-')[0] || val}-${val}`)
-                  }
-                  value={year.split('-')[1] || ''}
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <TextField
-                  label="Make"
-                  value={make}
-                  onChange={setMake}
-                  autoComplete="off"
-                  placeholder="e.g. Honda"
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <TextField
-                  label="Model"
-                  value={model}
-                  onChange={setModel}
-                  autoComplete="off"
-                  placeholder="e.g. Civic"
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <Select
-                  label="Vehicle Type"
-                  options={vehicleTypeOptions}
-                  onChange={setVehicleType}
-                  value={vehicleType}
-                />
-              </div>
-
-              <div style={{ alignSelf: 'end' }}>
-                <Button
-                  onClick={() => {
-                    const [from, to] = year.split('-');
-                    if (from && to && make && model && vehicleType) {
-                      setEntries((prev) => [...prev, { from, to, make, model, vehicleType }]);
-                      setYear('');
-                      setMake('');
-                      setModel('');
-                      setVehicleType('2-wheeler');
-                    }
-                  }}
-                >
-                  Add More
-                </Button>
-              </div>
-            </InlineStack>
-
-            {entries.length > 0 && (
-              <Card>
+          <Modal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            title="Add Products"
+            primaryAction={{
+              content: 'Add',
+              onAction: () => {
+                const selectedData = products
+                  .filter((product) => selectedResources.includes(product.id))
+                  .map((p) => ({ ...p, type: 'products' }));
+                setSelectedItems((prev) => [
+                  ...prev.filter((item) => item.type !== 'products'),
+                  ...selectedData,
+                ]);
+                setModalOpen(false);
+              },
+            }}
+            secondaryActions={[{ content: 'Cancel', onAction: () => setModalOpen(false) }]}
+          >
+            <Modal.Section>
+              <TextField
+                label="Search Products"
+                value={searchTerm}
+                onChange={setSearchTerm}
+                autoComplete="off"
+                prefix={<Icon source={SearchListIcon} tone="base" />}
+              />
+              <div style={{ marginTop: '16px' }}>
                 <IndexTable
-                  resourceName={{ singular: 'entry', plural: 'entries' }}
-                  itemCount={entries.length}
-                  headings={[
-                    { title: 'From' },
-                    { title: 'To' },
-                    { title: 'Make' },
-                    { title: 'Model' },
-                    { title: 'Vehicle Type' },
-                    { title: 'Actions' },
-                  ]}
+                  resourceName={{ singular: 'product', plural: 'products' }}
+                  itemCount={filteredProducts.length}
+                  selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+                  onSelectionChange={handleSelectionChange}
+                  headings={[{ title: 'Product' }]}
+                  selectable
                 >
-                  {entries.map((item, index) => (
-                    <IndexTable.Row id={`${index}`} key={index} position={index}>
-                      <IndexTable.Cell>{item.from}</IndexTable.Cell>
-                      <IndexTable.Cell>{item.to}</IndexTable.Cell>
-                      <IndexTable.Cell>{item.make}</IndexTable.Cell>
-                      <IndexTable.Cell>{item.model}</IndexTable.Cell>
-                      <IndexTable.Cell>{item.vehicleType}</IndexTable.Cell>
+                  {filteredProducts.map(({ id, title }, index) => (
+                    <IndexTable.Row id={id} key={id} selected={selectedResources.includes(id)} position={index}>
                       <IndexTable.Cell>
-                        <Button
-                          icon={DeleteIcon}
-                          variant="tertiary"
-                          onClick={() => {
-                            setEntries(prev => prev.filter((_, i) => i !== index));
-                          }}
-                          accessibilityLabel="Delete entry"
-                        />
+                        <span style={{
+                          display: 'inline-block',
+                          maxWidth: '200px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          verticalAlign: 'middle',
+                        }}>
+                          {title}
+                        </span>
                       </IndexTable.Cell>
                     </IndexTable.Row>
                   ))}
                 </IndexTable>
-              </Card>
-            )}
+              </div>
+            </Modal.Section>
+          </Modal>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="primary" onClick={handleSave} disabled={isSaving} loading={isSaving}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          </BlockStack>
-        </Card>
-      )}
-
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={`Add ${selected}`}
-        primaryAction={{
-          content: 'Add',
-          onAction: () => {
-            const selectedData = products
-              .filter((product) => selectedResources.includes(product.id))
-              .map((p) => ({
-                ...(p as { id: string; title: string }),
-                type: selected,
-              }));
-
-            setSelectedItems((prev) => [
-              ...prev.filter((item) => item.type !== selected),
-              ...selectedData,
-            ]);
-            setModalOpen(false);
-          },
-        }}
-        secondaryActions={[{ content: 'Cancel', onAction: () => setModalOpen(false) }]}
-      >
-        <Modal.Section>
-          <TextField
-            label={`Search ${selected}`}
-            value={searchTerm}
-            onChange={setSearchTerm}
-            autoComplete="off"
-            prefix={<Icon source={SearchListIcon} tone="base" />}
-          />
-          <div style={{ marginTop: '16px' }}>
-            <IndexTable
-              resourceName={{ singular: selected, plural: `${selected}s` }}
-              itemCount={filteredProducts.length}
-              selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
-              onSelectionChange={handleSelectionChange}
-              headings={[{ title: selected === 'products' ? 'Product' : 'Collection' }]}
-              selectable
-            >
-              {filteredProducts.map(({ id, title }, index) => (
-                <IndexTable.Row
-                  id={id}
-                  key={id}
-                  selected={selectedResources.includes(id)}
-                  position={index}
-                >
-                  <IndexTable.Cell>
-                    <span
-                      title={title}
-                      style={{
-                        display: 'inline-block',
-                        maxWidth: '200px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        verticalAlign: 'middle',
-                      }}
-                    >
-                      {title}
-                    </span>
-                  </IndexTable.Cell>
-                </IndexTable.Row>
-              ))}
-            </IndexTable>
-          </div>
-        </Modal.Section>
-      </Modal>
-    </BlockStack>
+          <Modal
+            open={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            title="Edit Entry"
+            primaryAction={{ content: 'Update', onAction: handleEditSave }}
+            secondaryActions={[{ content: 'Cancel', onAction: () => setEditModalOpen(false) }]}
+          >
+            <Modal.Section>
+              <FormLayout>
+                <Select label="From Year" options={yearOptions} value={year.split('-')[0] || ''} onChange={(val) => setYear(`${val}-${year.split('-')[1] || val}`)} error={validationErrors.yearFrom} />
+                <Select label="To Year" options={yearOptions} value={year.split('-')[1] || ''} onChange={(val) => setYear(`${year.split('-')[0] || val}-${val}`)} error={validationErrors.yearTo} />
+                <TextField label="Make" value={make} onChange={setMake} error={validationErrors.make} autoComplete="off"
+                />
+                <TextField label="Model" value={model} onChange={setModel} error={validationErrors.model} autoComplete="off"
+                />
+                <Select label="Vehicle Type" options={vehicleTypeOptions} value={vehicleType} onChange={(selected) => setVehicleType(selected as '2-wheeler' | '4-wheeler')} error={validationErrors.vehicleType} />
+              </FormLayout>
+            </Modal.Section>
+          </Modal>
+        </BlockStack>
+      </div>
+    </Page>
   );
 }

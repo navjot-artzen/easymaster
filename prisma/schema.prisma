@@ -113,9 +113,12 @@ model YearEntry {
 }
 
 model CsvFile {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  url       String
-  shop      String   
-  createdAt DateTime @default(now())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  url           String
+  shop          String 
+  totalRecords  Int 
+  active        Boolean? @default(false)
+  isProcessed   Boolean? @default(false)
+  createdAt     DateTime @default(now())
 }

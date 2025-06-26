@@ -1,15 +1,16 @@
 import prisma from '@/lib/prisma';
 
 export const getCsvData = async () => {
-  const latestFile = await prisma.csvFile.findFirst({
-    orderBy: { createdAt: 'desc' },
-  });
+     const activeFile = await prisma.csvFile.findFirst({
+      where: { active: true, isProcessed: false },
+      orderBy: { createdAt: 'asc' },
+    });
 
-  if (!latestFile || !latestFile.url) {
+  if (!activeFile || !activeFile.url) {
     throw new Error("No CSV file found in the database");
   }
 
-  const res = await fetch(latestFile.url);
+  const res = await fetch(activeFile.url);
   if (!res.ok) {
     throw new Error(`Failed to fetch CSV from URL: ${res.statusText}`);
   }

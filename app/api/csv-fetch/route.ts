@@ -47,13 +47,30 @@ export async function GET(req: Request) {
   }
 }
 
+
+
+
 export async function POST(req: Request) {
   try {
     console.log("Cron triggered at:", new Date().toISOString());
 
-    const csvData = await getCsvData();
+    // 1. Find the active file (only one should be active at a time)
+    const activeFile = await prisma.csvFile.findFirst({
+      where: { active: true, isProcessed: false },
+      orderBy: { createdAt: 'asc' },
+    });
 
-    // Parse CSV
+    if (!activeFile) {
+      return NextResponse.json({
+        status: "failure",
+        message: "No active file to process",
+      });
+    }
+
+    // 2. Fetch CSV data (assuming from Supabase or similar)
+    const csvData = await fetch(activeFile.url, { cache: 'no-store' }).then((res) => res.text());
+
+    // 3. Parse CSV
     const records = parse(csvData, {
       columns: true,
       skip_empty_lines: true,
@@ -62,40 +79,71 @@ export async function POST(req: Request) {
     const chunkSize = 10;
     const totalChunks = Math.ceil(records.length / chunkSize);
 
-    // Get last processed chunk index from Redis
-    const lastProcessedChunk = (await redis.get<number>('csv_chunk_index')) ?? 0;
+    // 4. Get current chunk progress from Redis
+    const redisKey = 'csv_chunk_index';
+    const lastProcessedChunk = (await redis.get<number>(redisKey)) ?? 0;
 
-    // If all chunks are already processed, stop
+    // 5. If all chunks are processed for this file
     if (lastProcessedChunk >= totalChunks) {
-      return NextResponse.json<APIResponse>({
+      // Mark active file as complete
+      await prisma.csvFile.update({
+        where: { id: activeFile.id },
+        data: {
+          active: false,
+          isProcessed: true,
+        },
+      });
+
+      // Find next file to activate
+      const nextFile = await prisma.csvFile.findFirst({
+        where: { shop: activeFile.shop, active: false, isProcessed: false },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (nextFile) {
+        await prisma.csvFile.update({
+          where: { id: nextFile.id },
+          data: {
+            active: true,
+            isProcessed: false,
+          },
+        });
+
+        // Reset Redis index for next file
+        await redis.set(redisKey, 1);
+      }
+
+      return NextResponse.json({
         status: "success",
-        message: "All chunks already processed",
+        message: "Finished current file. Moved to next.",
       });
     }
 
-    // Process one chunk at a time (you can increase if needed)
+    // 6. Process next chunk
     const chunkStart = lastProcessedChunk * chunkSize;
     const chunk = records.slice(chunkStart, chunkStart + chunkSize);
     console.log(`Processing chunk ${lastProcessedChunk + 1}/${totalChunks}`, chunk);
     await processChunk(chunk);
 
-    // Save progress to Redis
-    await redis.set('csv_chunk_index', lastProcessedChunk + 1);
+    // 7. Save progress
+    await redis.set(redisKey, lastProcessedChunk + 1);
 
-    return NextResponse.json<APIResponse>({
+    return NextResponse.json({
       status: "success",
       data: {
+        fileId: activeFile.id,
         processedChunk: lastProcessedChunk + 1,
         totalChunks,
       },
     });
-
   } catch (error) {
-    console.error('CSV processing failed:', error);
-    return NextResponse.json<APIResponse>({
+    console.error("CSV processing failed:", error);
+    return NextResponse.json({
       status: "failure",
-      error: 'Processing failed'
+      error: "Processing failed",
     });
   }
 }
+
+
 

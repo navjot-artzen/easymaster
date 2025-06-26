@@ -1,53 +1,85 @@
-<link href="{{ 'ymm-filter.css' | asset_url }}" rel="stylesheet" text="text/css" >
+<link href="{{ 'ymm-filter.css' | asset_url }}" rel="stylesheet" type="text/css">
 
-<!-- vehicle-search.liquid -->
 <div class="ymm-filter">
- <label class="ymm-title">Search for Parts That Fit Your Vehicle</label>
- <div class="ymm-inner-filter">
-  <select id="ymm-make" class="ymm-dropdown">
-    <option value="">- Make -</option>
-    {% comment %} These would typically come from your vehicle data {% endcomment %}
-    <option value="Toyota">Toyota</option>
-    <option value="Honda">Honda</option>
-    <option value="Ford">Ford</option>
-    <option value="Tata">Tata</option>
-  </select>
+  <label class="ymm-title">Search for Parts That Fit Your Vehicle</label>
 
-  <select id="ymm-model" class="ymm-dropdown" disabled>
-    <option value="">- Model -</option>
-  </select>
 
-  <select id="ymm-year" class="ymm-dropdown" disabled>
-    <option value="">- Year -</option>
-  </select>
+  <div class="ymm-inner-filter">
+    <select id="ymm-make" class="ymm-dropdown">
+      <option value="">- Make -</option>
+      <option value="Toyota">Toyota</option>
+      <option value="Honda">Honda</option>
+      <option value="Ford">Ford</option>
+      <option value="Tata">Tata</option>
+    </select>
 
-  <button class="ymm-search-button" onclick="handleSearch()">Search</button>
-  <a href="#" class="ymm-clear-link" onclick="clearFilters()">Clear filters</a>
-</div>
+    <select id="ymm-model" class="ymm-dropdown" disabled>
+      <option value="">- Model -</option>
+    </select>
+
+    <select id="ymm-year" class="ymm-dropdown" disabled>
+      <option value="">- Year -</option>
+    </select>
+
+    <button id="ymm-search-btn" class="ymm-search-button" onclick="handleSearch()">
+      Search
+    </button>
+
+    <a href="#" class="ymm-clear-link" onclick="clearFilters()">Clear filters</a>
+  </div>
+
+  <div class="ymm-vin-search">
+
+    <input type="text" id="vin-input" placeholder="Enter VIN" class="vin-input" maxlength="17">
+    <button id="vin-search-btn" class="vin-search-button" onclick="searchByVin()">Search by VIN</button>
+  </div>
+  <div id="ymm-error" class="ymm-error-message" style="display: none; color: red; margin-bottom: 8px;"></div>
+
 </div>
 
 <script>
-  let ymmData = {}; // Store make-model mapping
+  const APP_BASE_url = "https://esaymaster.vercel.app";
+  let ymmData = {};
+
+  function showError(message) {
+    const errorBox = document.getElementById("ymm-error");
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+  }
+
+  function clearError() {
+    const errorBox = document.getElementById("ymm-error");
+    errorBox.textContent = '';
+    errorBox.style.display = 'none';
+  }
+
+  function setLoading(buttonId, loading) {
+    const button = document.getElementById(buttonId);
+    if (loading) {
+      button.disabled = true;
+      button.textContent = 'Searching...';
+    } else {
+      button.disabled = false;
+      button.textContent = buttonId === 'vin-search-btn' ? 'Search by VIN' : 'Search';
+    }
+  }
 
   document.addEventListener("DOMContentLoaded", async () => {
     const makeSelect = document.getElementById("ymm-make");
     const modelSelect = document.getElementById("ymm-model");
     const yearSelect = document.getElementById("ymm-year");
+    const vinInput = document.getElementById("vin-input");
 
-    // Populate years (2000 to 2025)
     yearSelect.innerHTML = '<option value="">- Year -</option>';
     for (let year = 2000; year <= 2025; year++) {
       yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
     }
 
-    // Fetch make-model data from API
     try {
-      const res = await fetch("https://esaymaster.vercel.app/api/make-model");
+      const res = await fetch(`${APP_BASE_url}/api/make-model`);
       const data = await res.json();
-      console.log("data",data)
       ymmData = {};
 
-      // Populate Make dropdown and build ymmData map
       makeSelect.innerHTML = '<option value="">- Make -</option>';
       data.makes.forEach((make) => {
         ymmData[make.name] = make.models.map((model) => model.name);
@@ -58,63 +90,152 @@
     }
 
     makeSelect.addEventListener("change", () => {
-      const selectedMake = makeSelect.value;
+      clearError();
+      vinInput.disabled = makeSelect.value !== "";
       modelSelect.innerHTML = '<option value="">- Model -</option>';
       modelSelect.disabled = true;
       yearSelect.value = '';
       yearSelect.disabled = true;
 
-      if (!selectedMake || !ymmData[selectedMake]) return;
+      if (!makeSelect.value || !ymmData[makeSelect.value]) return;
 
-      // Populate Model dropdown
-      ymmData[selectedMake].forEach((model) => {
+      ymmData[makeSelect.value].forEach((model) => {
         modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
       });
       modelSelect.disabled = false;
     });
 
     modelSelect.addEventListener("change", () => {
-      if (modelSelect.value) {
-        yearSelect.disabled = false;
-      } else {
-        yearSelect.value = '';
-        yearSelect.disabled = true;
-      }
+      clearError();
+      yearSelect.disabled = !modelSelect.value;
+    });
+
+    vinInput.addEventListener("input", () => {
+      clearError();
+      const make = makeSelect.value;
+      modelSelect.disabled = !!vinInput.value;
+      makeSelect.disabled = !!vinInput.value;
+      modelSelect.disabled = !!vinInput.value;
+      yearSelect.disabled = !!vinInput.value;
     });
   });
 
-  function handleSearch() {
+  async function checkProductTagExists(tag) {
+    const shop = "{{ shop.permanent_domain | remove: 'https://' }}";
+    try {
+      const response = await fetch(`${APP_BASE_url}/api/check-tag-exist?tag=${tag}&shop=${shop}`);
+      const json = await response.json();
+      return json.exists === true;
+    } catch (err) {
+      console.error("Tag check failed:", err);
+      return false;
+    }
+  }
+
+  window.searchByVin = async function () {
+    clearError();
+    setLoading('vin-search-btn', true);
+
+    const vin = document.getElementById("vin-input").value.trim().toUpperCase();
+    const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
+
+    if (!vin || vin.length !== 17) {
+      showError("Please enter a valid 17-character VIN.");
+      setLoading('vin-search-btn', false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${APP_BASE_url}/api/search-by-vin?vin=${vin}`);
+      const { formattedData } = await response.json();
+
+      const make = formattedData.Make?.toLowerCase().replace(/\s+/g, "-") || "";
+      const model = formattedData.Model?.toLowerCase().replace(/\s+/g, "-") || "";
+      const year = formattedData["Model Year"]?.toString() || "";
+
+      if (!make || !model || !year) {
+        showError("Invalid vehicle data from VIN.");
+        setLoading('vin-search-btn', false);
+        return;
+      }
+
+      const tag = `${make}-${model}-${year}`;
+      const exists = await checkProductTagExists(tag);
+
+      if (exists) {
+        window.location.href = `/collections/${defaultCollection}/${tag}`;
+      } else {
+        showError("No products found for this vehicle.");
+      }
+    } catch (err) {
+      console.error("VIN lookup failed:", err);
+      showError("Error fetching data for VIN. Please try again.");
+    }
+
+    setLoading('vin-search-btn', false);
+  };
+
+  window.handleSearch = async function () {
+    clearError();
+    setLoading('ymm-search-btn', true);
+
     const make = document.getElementById('ymm-make').value;
     const model = document.getElementById('ymm-model').value;
     const year = document.getElementById('ymm-year').value;
+    const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
-    if (!make) return alert('Please select a make');
-    if (!model) return alert('Please select a model');
-    if (!year) return alert('Please select a year');
+    if (!make) {
+      showError("Please select a make.");
+      setLoading('ymm-search-btn', false);
+      return;
+    }
+    if (!model) {
+      showError("Please select a model.");
+      setLoading('ymm-search-btn', false);
+      return;
+    }
+    if (!year) {
+      showError("Please select a year.");
+      setLoading('ymm-search-btn', false);
+      return;
+    }
 
     const cleanMake = make.trim().replace(/\s+/g, '-').toLowerCase();
     const cleanModel = model.trim().replace(/\s+/g, '-').toLowerCase();
-    const cleanYear = year.toString().trim();
+    const cleanYear = year.trim();
+    const tag = `${cleanMake}-${cleanModel}-${cleanYear}`;
 
-    const vehiclePath = `${cleanMake}-${cleanModel}-${cleanYear}`;
-    const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
+    const exists = await checkProductTagExists(tag);
 
-    window.location.href = `/collections/${defaultCollection}/${vehiclePath}`;
-  }
+    if (exists) {
+      window.location.href = `/collections/${defaultCollection}/${tag}`;
+    } else {
+      showError("No products found for this vehicle.");
+    }
 
-  function clearFilters() {
+    setLoading('ymm-search-btn', false);
+  };
+
+  window.clearFilters = function () {
+    clearError();
     document.getElementById('ymm-make').selectedIndex = 0;
     document.getElementById('ymm-model').innerHTML = '<option value="">- Model -</option>';
     document.getElementById('ymm-model').disabled = true;
     document.getElementById('ymm-year').value = '';
     document.getElementById('ymm-year').disabled = true;
-  }
+
+    document.getElementById('vin-input').value = '';
+    document.getElementById('vin-input').disabled = false;
+    document.getElementById('ymm-make').disabled = false;
+    document.getElementById('ymm-model').disabled = true;
+    document.getElementById('ymm-year').disabled = true;
+  };
 </script>
 
 {% schema %}
 {
   "name": "Vehicle Search Filter",
-  "target": "section",
+    "target": "section",
   "settings": [
     {
       "type": "text",
@@ -126,3 +247,4 @@
   ]
 }
 {% endschema %}
+

@@ -58,7 +58,7 @@ export default function SearchEntryListPage() {
         const res = await fetch(`/api/product?shop=${shop}&page=${page}&limit=${limit}`);
         if (!res.ok) throw new Error('Failed to fetch entries');
         const { entries, totalCount } = await res.json();
-        console.log(entries, totalCount ,"entries, totalCount ")
+        console.log(entries, totalCount, "entries, totalCount ")
         setEntries(entries);
         setTotalCount(totalCount);
       } catch (error) {
@@ -70,7 +70,7 @@ export default function SearchEntryListPage() {
 
     fetchEntries();
   }, [app, page]);
-  console.log(entries, page ,"entries, page ")
+  console.log(entries, page, "entries, page ")
   const flatRows = entries || []
   // const flatRows: FlatProductRow[] = entries.flatMap((entry) =>
   //   entry.products.map((product) => ({
@@ -85,7 +85,7 @@ export default function SearchEntryListPage() {
   // );
 
   const totalPages = Math.ceil(totalCount / limit);
- 
+
   return (
     <Page
       title="Search entries & results"
@@ -105,75 +105,75 @@ export default function SearchEntryListPage() {
           </BlockStack>
         ) : (
           <>
-            <IndexTable
-              resourceName={{ singular: 'product', plural: 'products' }}
-              itemCount={flatRows.length}
-              selectable={false}
-              headings={[
-                { title: 'Product Title' },
-                { title: 'Company' },
-                { title: 'Car Name' },
-                { title: 'Year' },
-                { title: 'Vehicle_Type' },
-                { title: 'View' },
-                { title: 'Edit' },
-              ]}
-            >
-              {flatRows.map((row, index) => (
-                <IndexTable.Row
-                  id={`${row.entryId}-${index}`}
-                  key={`${row.entryId}-${index}`}
-                  position={index}
-                >
-                  <IndexTable.Cell>
-                    <a
-                      href={`https://${app?.config?.shop}/admin/products/${row.legacyResourceId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: '#1a73e8',
-                        textDecoration: 'underline',
-                        display: 'inline-block',
-                        maxWidth: '200px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                      title={row.productTitle}
-                    >
-                      {row.productTitle.length > 20 ? row.productTitle.slice(0, 20) + '…' : row.productTitle}
-                    </a>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>{row.make}</IndexTable.Cell>
-                  <IndexTable.Cell>{row.model}</IndexTable.Cell>
-                  <IndexTable.Cell>{row.year}</IndexTable.Cell>
-                  <IndexTable.Cell>
-                    {row.vehicleType
-                      ? row.vehicleType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
-                      : '-'}
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Button
-                      onClick={() =>
-                        router.push(`/database/${row.legacyResourceId}/cars`)
-                      }
-                      size="slim"
-                    >
-                      View
-                    </Button>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Button
-                      onClick={() => router.push(`/database/${row.entryId}/edit`)}
-                      size="slim"
-                      variant="secondary"
-                    >
-                      Edit
-                    </Button>
-                  </IndexTable.Cell>
-                </IndexTable.Row>
-              ))}
-            </IndexTable>
+            <div style={{ minHeight: '300px',minWidth: 'full' }}>
+              <IndexTable
+                resourceName={{ singular: 'product', plural: 'products' }}
+                itemCount={flatRows.length}
+                selectable={false}
+                headings={[
+                  { title: 'Product Title' },
+                  { title: 'Company' },
+                  { title: 'Car Name' },
+                  { title: 'Year' },
+                  { title: 'Vehicle_Type' },
+                  { title: 'View' },
+                  { title: 'Edit' },
+                ]}
+              >
+                {flatRows.map((row, index) => (
+                  <IndexTable.Row
+                    id={`${row.entryId}-${index}`}
+                    key={`${row.entryId}-${index}`}
+                    position={index}
+                  >
+                    <IndexTable.Cell>
+                      <a
+                        href={`https://${app?.config?.shop}/admin/products/${row.legacyResourceId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: '#1a73e8',
+                          textDecoration: 'underline',
+                          display: 'inline-block',
+                          maxWidth: '200px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={row.productTitle}
+                      >
+                        {row.productTitle.length > 20 ? row.productTitle.slice(0, 20) + '…' : row.productTitle}
+                      </a>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>{row.make}</IndexTable.Cell>
+                    <IndexTable.Cell>{row.model}</IndexTable.Cell>
+                    <IndexTable.Cell>{row.year}</IndexTable.Cell>
+                    <IndexTable.Cell>
+                      {row.vehicleType
+                        ? row.vehicleType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
+                        : '-'}
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Button
+                        onClick={() => router.push(`/database/${row.legacyResourceId}/cars`)}
+                        size="slim"
+                      >
+                        View
+                      </Button>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Button
+                        onClick={() => router.push(`/database/${row.entryId}/edit`)}
+                        size="slim"
+                        variant="secondary"
+                      >
+                        Edit
+                      </Button>
+                    </IndexTable.Cell>
+                  </IndexTable.Row>
+                ))}
+              </IndexTable>
+            </div>
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
