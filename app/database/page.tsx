@@ -105,7 +105,7 @@ export default function SearchEntryListPage() {
           </BlockStack>
         ) : (
           <>
-            <div style={{ minHeight: '300px',minWidth: 'full' }}>
+            <div style={{ minHeight: '300px', minWidth: 'full' }}>
               <IndexTable
                 resourceName={{ singular: 'product', plural: 'products' }}
                 itemCount={flatRows.length}
@@ -186,6 +186,10 @@ export default function SearchEntryListPage() {
                 />
               </div>
             )}
+
+            <div style={{ marginTop: '12px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+              Page <strong>{page}</strong> of <strong>{totalPages}</strong> | Showing <strong>{entries.length}</strong> of <strong>{totalCount}</strong> total entries
+            </div>
           </>
         )}
       </Card>

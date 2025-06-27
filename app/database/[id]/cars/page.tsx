@@ -32,6 +32,7 @@ export default function ProductCarsPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount,setTotalCount]=useState()
   const pageSize = 10;
   const router = useRouter()
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function ProductCarsPage() {
         const data = await res.json();
         setEntries(data.entries || []);
         setProductTitle(data.productTitle || null);
+        setTotalCount(data.totalCount);
         setTotalPages(Math.ceil(data.totalCount / pageSize));
       } catch (error) {
         console.error('Error fetching cars:', error);
@@ -115,14 +117,20 @@ export default function ProductCarsPage() {
                 </IndexTable.Row>
               ))}
             </IndexTable>
-            <InlineStack align="center" blockAlign="center" >
-              <Pagination
-                hasPrevious={currentPage > 1}
-                onPrevious={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                hasNext={currentPage < totalPages}
-                onNext={() => setCurrentPage((p) => p + 1)}
-              />
-            </InlineStack>
+            {totalPages > 1 && (
+              <InlineStack align="center" blockAlign="center" >
+                <Pagination
+                  hasPrevious={currentPage > 1}
+                  onPrevious={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  hasNext={currentPage < totalPages}
+                  onNext={() => setCurrentPage((p) => p + 1)}
+                />
+              </InlineStack>
+            )}
+            <div style={{ marginTop: '12px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+              Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> | Showing <strong>{entries.length}</strong> of <strong>{totalCount}</strong> total entries
+            </div>
+
           </>
         )}
       </BlockStack>

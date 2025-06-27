@@ -16,7 +16,7 @@ function transformRawData(rawData: { Variable: string; Value: string }[]) {
 // 1N4AL3AP0JC204554
 
 // lib/cors.ts
-const corsHeaders = {
+ const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',

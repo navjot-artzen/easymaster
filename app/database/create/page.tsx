@@ -1,10 +1,10 @@
-import SearchFields from "@/app/components/Addproduct";
+import AddProduct from "@/app/components/Addproduct";
 
 export default function addProduct(){
 
     return(
         <>
-        <SearchFields/>
+        <AddProduct/>
         </>
     )
 }

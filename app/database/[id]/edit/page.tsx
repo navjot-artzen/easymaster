@@ -50,8 +50,8 @@ export default function EditSearchEntryPage() {
 
   const { selectedResources, handleSelectionChange } = useIndexResourceState(allFetchedProducts);
 
-  const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => {
-    const value = (1990 + i).toString();
+  const yearOptions = Array.from({ length: 2025 - 2000 + 1 }, (_, i) => {
+    const value = (2000 + i).toString();
     return { label: value, value };
   });
 
@@ -188,8 +188,8 @@ export default function EditSearchEntryPage() {
             <InlineStack wrap gap="300">
               <Select label="Year From" options={yearOptions} value={yearFrom} onChange={setYearFrom} />
               <Select label="Year To" options={yearOptions} value={yearTo} onChange={setYearTo} />
-              <TextField label="Make" value={make} onChange={setMake} autoComplete='off' />
-              <TextField label="Model" value={model} onChange={setModel} autoComplete='off' />
+              <TextField label="Make" value={make} onChange={(val) => setMake(val.charAt(0).toUpperCase() + val.slice(1))} autoComplete='off' />
+              <TextField label="Model" value={model} onChange={(val) => setModel(val.charAt(0).toUpperCase() + val.slice(1))} autoComplete='off' />
               <Select label="Vehicle Type" options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />
             </InlineStack>
           )}
@@ -207,7 +207,7 @@ export default function EditSearchEntryPage() {
             <IndexTable
               resourceName={{ singular: 'product', plural: 'products' }}
               itemCount={products.length}
-              headings={[{ title: 'ID' }, { title: 'Title' }, { title: 'Actions' }]}
+              headings={[{ title: 'ID' }, { title: 'Title' }]}
               selectable={false}
             >
               {products.map((product, index) => (
@@ -222,7 +222,7 @@ export default function EditSearchEntryPage() {
                   <IndexTable.Cell>
                     <Text as="span" variant="bodyMd" fontWeight="medium">{product.title}</Text>
                   </IndexTable.Cell>
-                  <IndexTable.Cell>
+                  {/* <IndexTable.Cell>
                     <Button
                       icon={DeleteIcon}
                       variant="tertiary"
@@ -231,14 +231,14 @@ export default function EditSearchEntryPage() {
                         setProducts(prev => prev.filter(p => p.legacyResourceId !== product.legacyResourceId));
                       }}
                     />
-                  </IndexTable.Cell>
+                  </IndexTable.Cell> */}
                 </IndexTable.Row>
               ))}
             </IndexTable>
           )}
-          <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+          {/* <div style={{ textAlign: 'right', marginTop: '1rem' }}>
             <Button onClick={() => setModalOpen(true)}>Add Products</Button>
-          </div>
+          </div> */}
         </div>
       </Card>
 

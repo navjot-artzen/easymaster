@@ -33,10 +33,13 @@ const GET_PRODUCT_TAGS_QUERY = `
   }
 `;
 
+function yearsOverlap(startA: number, endA: number, startB: number, endB: number): boolean {
+  return startA <= endB && startB <= endA;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = (await req.json()) as ProductEntryInput[];
-
     if (!Array.isArray(payload) || payload.length === 0) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
@@ -54,15 +57,66 @@ export async function POST(req: NextRequest) {
     const accessToken = session.accessToken;
     const mutationResponses = [];
     let createdCount = 0;
-
     const productTagsMap = new Map<string, Set<string>>();
+    const duplicateEntries: any[] = [];
 
     for (const entry of payload) {
-      if (!entry.year || !entry.make || !entry.model || !entry.vehicleType || !Array.isArray(entry.products) || entry.products.length === 0) {
+      if (
+        !entry.year ||
+        !entry.make ||
+        !entry.model ||
+        !entry.vehicleType ||
+        !Array.isArray(entry.products) ||
+        entry.products.length === 0
+      ) {
         return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
       }
 
-      const [startFrom, end] = entry.year.includes('-') ? entry.year.split('-') : [entry.year, entry.year];
+      const [startFrom, end] = entry.year.includes('-')
+        ? entry.year.split('-')
+        : [entry.year, entry.year];
+      const startYear = parseInt(startFrom, 10);
+      const endYear = parseInt(end, 10);
+
+      const productLegacyIds = entry.products.map((p) => extractLegacyId(p.productId));
+
+      const existingEntries = await prisma.productsEntry.findMany({
+        where: {
+          shop,
+          make: entry.make,
+          model: entry.model,
+          products: {
+            some: {
+              legacyResourceId: {
+                in: productLegacyIds,
+              },
+            },
+          },
+        },
+      });
+
+      const isDuplicate = existingEntries.some((existing) => {
+        const existingStart = parseInt(existing.startFrom, 10);
+        const existingEnd = parseInt(existing.end, 10);
+
+        const overlaps = yearsOverlap(existingStart, existingEnd, startYear, endYear);
+        const sameProducts = existing.products.some((existingProduct: any) =>
+          productLegacyIds.includes(existingProduct.legacyResourceId)
+        );
+
+        return overlaps && sameProducts;
+      });
+
+      if (isDuplicate) {
+        duplicateEntries.push({
+          make: entry.make,
+          model: entry.model,
+          year: entry.year,
+          message: 'This entry already exists for one or more selected products.',
+        });
+        continue;
+      }
+
       await makeModalEntry(entry.make, entry.model, startFrom, end);
 
       await prisma.productsEntry.create({
@@ -72,7 +126,7 @@ export async function POST(req: NextRequest) {
           shop,
           make: entry.make,
           model: entry.model,
-          vehicleType: entry.vehicleType, // NEW
+          vehicleType: entry.vehicleType,
           products: entry.products.map((p) => ({
             title: p.title,
             gid: p.productId,
@@ -83,11 +137,10 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      const customTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end);
-
+      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end);
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
-        customTags.forEach((tag) => existingTags.add(tag));
+        ymmTags.forEach((tag) => existingTags.add(tag));
         productTagsMap.set(product.productId, existingTags);
       }
     }
@@ -139,12 +192,17 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Entries saved and tags updated.',
+      message: `${createdCount} entries saved.`,
       createdCount,
+      duplicateEntries, // ✅ Return all skipped duplicates
       mutations: mutationResponses,
     });
   } catch (error: any) {
     console.error('Error saving product entries:', error);
-    return NextResponse.json({ error: 'Server error', details: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Server error', details: error.message },
+      { status: 500 }
+    );
   }
 }
+
