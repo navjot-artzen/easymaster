@@ -3,7 +3,7 @@
 client_id = "8dd5ca1071d78b899bdfe9ef40ebccf1"
 name = "Eparts master app"
 handle = "eparts-master-app"
-application_url = "https://mathematical-robinson-knee-bedrooms.trycloudflare.com"
+application_url = "https://esaymaster.vercel.app"
 embedded = true
 
 [build]
@@ -25,9 +25,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://mathematical-robinson-knee-bedrooms.trycloudflare.com/auth/callback",
-  "https://mathematical-robinson-knee-bedrooms.trycloudflare.com/auth/shopify/callback",
-  "https://mathematical-robinson-knee-bedrooms.trycloudflare.com/api/auth/callback"
+  "https://esaymaster.vercel.app/auth/callback",
+  "https://esaymaster.vercel.app/auth/shopify/callback",
+  "https://esaymaster.vercel.app/api/auth/callback"
 ]
 
 [pos]

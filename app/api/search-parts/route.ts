@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 
 export const runtime = 'edge';
 
-
+const openAiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // export async function POST(req: NextRequest) {
 //   try {
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     if (!partNumber) {
       return NextResponse.json({ error: "partNumber is required" }, { status: 400 });
     }
-    const openAiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
     const prompt = `
     Given the vehicle part number "${partNumber}", return a list of compatible vehicles in the following JSON format:
 
