@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { parse } from 'csv-parse/sync';
 import redis from "@/lib/upstash/redis";
 import { getCsvData } from "@/utils/csv";
+import prisma from "@/lib/prisma";
+import { chunkSize } from "@/utils/config/constant";
 
 export async function GET() {
   try {
@@ -11,9 +13,19 @@ export async function GET() {
     }
 
     const records = parse(csvData, { columns: true, skip_empty_lines: true });
-    const chunkSize = 10;
     const totalChunks = Math.ceil(records.length / chunkSize);
-    const redisKey = `csv_chunk_index`
+    const activeFile = await prisma.csvFile.findFirst({
+      where: { active: true, isProcessed: false },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!activeFile) {
+      return NextResponse.json({
+        status: 'success',
+        message: "No active file found",
+        data: null
+      });
+    }
+    const redisKey = `csv_chunk_index_${activeFile.id}`;
     const processedChunks = (await redis.get<number>(redisKey)) ?? 0;
 
     return NextResponse.json({

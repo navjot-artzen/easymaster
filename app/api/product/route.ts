@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 //         end: true,
 //         make: true,
 //         model: true,
-//         vehicleType: true,
+//         driveType: true,
 //         products: {
 //           select: {
 //             title: true,
@@ -73,7 +73,8 @@ export async function GET(req: NextRequest) {
         end: true,
         make: true,
         model: true,
-        vehicleType: true,
+        driveType: true,
+        engineType:true,
         products: {
           select: {
             title: true,
@@ -93,7 +94,8 @@ export async function GET(req: NextRequest) {
         model: entry.model,
         year: `${entry.startFrom} - ${entry.end}`,
         legacyResourceId: product.legacyResourceId,
-        vehicleType: entry.vehicleType || 'ALL',
+        driveType: entry.driveType || 'ALL',
+        engineType:entry.engineType
       }))
     );
 

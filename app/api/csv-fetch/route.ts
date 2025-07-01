@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { parse } from 'csv-parse/sync';
-// import prisma from "@/lib/db/prisma-connect";
-import prisma from "../../../lib/prisma";
-
+import prisma from "@/lib/prisma";
 import redis from "@/lib/upstash/redis";
 import { getCsvData } from "@/utils/csv";
+import { chunkSize } from "@/utils/config/constant";
 
 type APIResponse = {
   status: "success" | "failure";
@@ -14,7 +13,7 @@ type APIResponse = {
 };
 
 async function processChunk(chunk: any[]) {
-  const productData = chunk.map(record => ({
+  let productData = chunk.map(record => ({
     handle: record['Part'],
     compatibility: record['Engine Type'],
     make: record['Brand'] || null,
@@ -22,9 +21,16 @@ async function processChunk(chunk: any[]) {
     year: record['Year'] || null,
   }));
 
+  productData = productData.filter((record) => {
+    const hasMake = record.make?.trim();
+    const hasModel = record.model?.trim();
+    const hasYear = record.year?.toString().trim();
+    return hasMake && hasModel && hasYear;
+  });
+
   await prisma.productYmm.createMany({
-    data: productData,
-  })
+    data: productData
+  });
 }
 
 export async function GET(req: Request) {
@@ -47,9 +53,6 @@ export async function GET(req: Request) {
   }
 }
 
-
-
-
 export async function POST(req: Request) {
   try {
     console.log("Cron triggered at:", new Date().toISOString());
@@ -70,19 +73,34 @@ export async function POST(req: Request) {
     // 2. Fetch CSV data (assuming from Supabase or similar)
     const csvData = await fetch(activeFile.url, { cache: 'no-store' }).then((res) => res.text());
 
-    // 3. Parse CSV
-    const records = parse(csvData, {
-      columns: true,
-      skip_empty_lines: true,
-    });
+    // 3. Parse CSV with explicit error handling
+    let records;
+    try {
+      records = parse(csvData, {
+        columns: true,
+        skip_empty_lines: true,
+      });
+    } catch (parseError: any) {
+      console.error("CSV parsing error:", parseError);
+      await prisma.csvFile.update({
+        where: { id: activeFile.id },
+        data: {
+          error: `CSV parse error: ${parseError?.message || parseError.toString()}`,
+        },
+      });
 
-    const chunkSize = 10;
+      return NextResponse.json({
+        status: "failure",
+        error: `CSV parsing failed: ${parseError.message || "Unknown error"}`,
+      });
+    }
+
     const totalChunks = Math.ceil(records.length / chunkSize);
 
     // 4. Get current chunk progress from Redis
-    const redisKey = 'csv_chunk_index';
+    const redisKey = `csv_chunk_index_${activeFile.id}`;
     const lastProcessedChunk = (await redis.get<number>(redisKey)) ?? 0;
-
+    console.log(lastProcessedChunk, "lastProcessedChunk")
     // 5. If all chunks are processed for this file
     if (lastProcessedChunk >= totalChunks) {
       // Mark active file as complete
@@ -90,6 +108,7 @@ export async function POST(req: Request) {
         where: { id: activeFile.id },
         data: {
           active: false,
+          processedRecords: activeFile.totalRecords,
           isProcessed: true,
         },
       });
@@ -108,9 +127,9 @@ export async function POST(req: Request) {
             isProcessed: false,
           },
         });
-
+        const _redisKey = `csv_chunk_index_${nextFile.id}`;
         // Reset Redis index for next file
-        await redis.set(redisKey, 1);
+        await redis.set(_redisKey, 1);
       }
 
       return NextResponse.json({
@@ -136,7 +155,7 @@ export async function POST(req: Request) {
         totalChunks,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("CSV processing failed:", error);
     return NextResponse.json({
       status: "failure",
@@ -144,6 +163,3 @@ export async function POST(req: Request) {
     });
   }
 }
-
-
-

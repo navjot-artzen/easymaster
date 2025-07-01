@@ -55,70 +55,76 @@ model AssociatedUser {
 model ProductYmm {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   handle        String
-  compatibility String
+  compatibility String?
   make          String
   model         String
   year          String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@unique([handle, compatibility, make, model, year])
 }
 
 type Product {
-  gid             String
-  title           String
+  gid              String
+  title            String
   legacyResourceId String
 }
 
 model ProductsEntry {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  startFrom String
-  end       String
-  make      String
-  model     String
-  vehicleType   String?  
-  shop      String
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  startFrom  String
+  end        String
+  make       String
+  model      String
+  driveType  String?
+  engineType Json?
+  shop       String
+  products   Product[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@map("ProductsEntry")
 }
 
-
 model Make {
-  id    String    @id @default(auto()) @map("_id") @db.ObjectId
-  name  String  @unique
+  id     String      @id @default(auto()) @map("_id") @db.ObjectId
+  name   String      @unique
   models Model[]
   years  YearEntry[]
-
 }
 
 model Model {
-  id     String    @id @default(auto()) @map("_id") @db.ObjectId
-  name   String    @unique
+  id     String      @id @default(auto()) @map("_id") @db.ObjectId
+  name   String      @unique
   makeId String
-  make   Make   @relation(fields: [makeId], references: [id])
+  make   Make        @relation(fields: [makeId], references: [id])
   years  YearEntry[]
+
   @@unique([name, makeId]) // prevent duplicate models under same make
 }
+
 model YearEntry {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
   from    String
   to      String
   makeId  String
   modelId String
-  make    Make     @relation(fields: [makeId], references: [id])
-  model   Model    @relation(fields: [modelId], references: [id])
+  make    Make   @relation(fields: [makeId], references: [id])
+  model   Model  @relation(fields: [modelId], references: [id])
+
   @@unique([from, to, makeId, modelId])
 }
 
 model CsvFile {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  url           String
-  shop          String 
-  totalRecords  Int 
-  active        Boolean? @default(false)
-  isProcessed   Boolean? @default(false)
-  createdAt     DateTime @default(now())
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  url              String
+  shop             String
+  error            String?  @default("")
+  processedRecords Int      @default(0)
+  totalRecords     Int
+  active           Boolean  @default(false)
+  isProcessed      Boolean  @default(false)
+  createdAt        DateTime @default(now())
 }

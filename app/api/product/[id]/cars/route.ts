@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { LIMIT } from '@/lib/constant';
 
 export async function GET(
   req: NextRequest,
@@ -15,8 +16,8 @@ export async function GET(
   }
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const pageSize = parseInt(searchParams.get('pageSize') || '10', 10);
+  const page = parseInt(searchParams.get('page') || '1', LIMIT);
+  const pageSize = parseInt(searchParams.get('pageSize') || '10', LIMIT);
   const skip = (page - 1) * pageSize;
 
   try {
@@ -37,7 +38,7 @@ export async function GET(
           end: true,
           make: true,
           model: true,
-          vehicleType: true,
+          driveType: true,
           createdAt: true,
           updatedAt: true,
           products: true,

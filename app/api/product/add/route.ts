@@ -5,20 +5,11 @@ import { findSessionByShop } from '@/lib/db/session-storage';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
 import { makeModalEntry } from '@/lib/db/db-function';
+import { ProductEntryInput } from '@/types/interfaces';
 
 export const dynamic = 'force-dynamic';
 
-type ProductEntryInput = {
-  shop: string;
-  year: string;
-  make: string;
-  model: string;
-  vehicleType: string;
-  products: {
-    productId: string;
-    title: string;
-  }[];
-};
+
 
 function extractLegacyId(gid: string): string {
   const parts = gid.split('/');
@@ -39,6 +30,7 @@ function yearsOverlap(startA: number, endA: number, startB: number, endB: number
 
 export async function POST(req: NextRequest) {
   try {
+    
     const payload = (await req.json()) as ProductEntryInput[];
     if (!Array.isArray(payload) || payload.length === 0) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -65,7 +57,8 @@ export async function POST(req: NextRequest) {
         !entry.year ||
         !entry.make ||
         !entry.model ||
-        !entry.vehicleType ||
+        !entry.driveType ||
+        !entry.engineType||
         !Array.isArray(entry.products) ||
         entry.products.length === 0
       ) {
@@ -126,7 +119,8 @@ export async function POST(req: NextRequest) {
           shop,
           make: entry.make,
           model: entry.model,
-          vehicleType: entry.vehicleType,
+          driveType: entry.driveType,
+          engineType:entry.engineType,
           products: entry.products.map((p) => ({
             title: p.title,
             gid: p.productId,

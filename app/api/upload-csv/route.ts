@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import prisma from '@/lib/prisma';
-
+import { chunkSize } from "@/utils/config/constant";
 import { parse } from 'csv-parse/sync';
 import redis from '@/lib/upstash/redis';
 
@@ -13,11 +13,27 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   console.log("inside api")
   const formData = await req.formData();
-  
+
   const file = formData.get('file') as File;
   const shop = formData.get('shop') as string | null;
   const text = await file.text();
   const records = parse(text, { columns: true, skip_empty_lines: true });
+  const rawRows = parse(text, { columns: false, skip_empty_lines: true });
+  const csvHeader = rawRows[0];
+
+  const requiredHeaders = ['Brand', 'Model', 'Year', 'Engine Type', 'Part'];
+
+  const missingHeaders = requiredHeaders.filter(
+    (header) => !csvHeader.includes(header)
+  );
+
+  if (missingHeaders.length > 0) {
+    return NextResponse.json(
+      { message: `CSV is missing required columns: ${missingHeaders.join(', ')}` },
+      { status: 400 }
+    );
+  }
+
   const totalRecords = records.length;
 
   if (!file || file.type !== 'text/csv') {
@@ -52,14 +68,14 @@ export async function POST(req: NextRequest) {
 
   const publicUrl = publicData?.publicUrl;
 
-     const activeFile = await prisma.csvFile.findFirst({
-      where: { active: true, isProcessed: false },
-    });
+  const activeFile = await prisma.csvFile.findFirst({
+    where: { active: true, isProcessed: false },
+  });
 
-    const isFirstFile = !activeFile;
+  const isFirstFile = !activeFile;
 
 
-   const createdFile = await prisma.csvFile.create({
+  const createdFile = await prisma.csvFile.create({
     data: {
       name: file.name,
       url: publicUrl || '',
@@ -71,8 +87,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     message: 'Upload successful',
-     createdFile
-
+    csvFile: createdFile
   });
 }
 
@@ -97,12 +112,11 @@ export async function GET(req: NextRequest) {
   const enrichedFiles = await Promise.all(
     files.map(async (file) => {
       let totalChunks = 0;
-      const chunkSize = 10;
-      const redisKey = `csv_chunk_index`;
+      const redisKey = `csv_chunk_index_${file.id}`;
       const processedChunks = (await redis.get<number>(redisKey)) ?? 0;
 
       try {
-        const {totalRecords}=file
+        const { totalRecords } = file
         totalChunks = Math.ceil(totalRecords / chunkSize);
       } catch (error) {
         console.error(`Failed to load or parse CSV from ${file.url}:`, error);
@@ -114,10 +128,11 @@ export async function GET(req: NextRequest) {
         url: file.url,
         active: file.active,
         isProcessed: file.isProcessed,
-        totalRecords:file.totalRecords,
+        totalRecords: file.totalRecords,
         chunkSize,
         totalChunks,
         processedChunks,
+        error: file.error
       };
     })
   );

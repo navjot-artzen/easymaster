@@ -1,61 +1,36 @@
 'use client';
 
+import { FlatProductRow } from '@/types/interfaces';
+import { LIMIT } from '@/utils/config/constant';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import {
   Page,
-  Card,
-  IndexTable,
-  Spinner,
-  BlockStack,
   Button,
-  Pagination,
   InlineStack,
 } from '@shopify/polaris';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface ProductEntry {
-  id: string;
-  startFrom: string;
-  end: string;
-  make: string;
-  model: string;
-  vehicleType?: string;
-  products: {
-    gid: string;
-    title: string;
-    legacyResourceId: string;
-  }[];
-}
-
-interface FlatProductRow {
-  entryId: string;
-  productTitle: string;
-  make: string;
-  model: string;
-  year: string;
-  legacyResourceId: string;
-  vehicleType?: string;
-}
+import { ProductDatabaseTable } from '../components/TableCard/ProductDatabase';
 
 export default function SearchEntryListPage() {
   const [entries, setEntries] = useState<FlatProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const limit = 10;
+  const [shop, setShop] = useState<string | undefined>()
 
   const router = useRouter();
   const app = useAppBridge();
 
   useEffect(() => {
     const shop = app?.config?.shop;
+    setShop(shop)
     if (!shop) return;
 
     const fetchEntries = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/product?shop=${shop}&page=${page}&limit=${limit}`);
+        const res = await fetch(`/api/product?shop=${shop}&page=${page}&limit=${LIMIT}`);
         if (!res.ok) throw new Error('Failed to fetch entries');
         const { entries, totalCount } = await res.json();
         console.log(entries, totalCount, "entries, totalCount ")
@@ -80,11 +55,12 @@ export default function SearchEntryListPage() {
   //     model: entry.model,
   //     year: `${entry.startFrom} - ${entry.end}`,
   //     legacyResourceId: product.legacyResourceId,
-  //     vehicleType: entry.vehicleType || 'ALL',
+  //     driveType: entry.driveType || 'ALL',
   //   }))
   // );
 
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(totalCount / LIMIT);
+  if (!shop) return null;
 
   return (
     <Page
@@ -98,101 +74,16 @@ export default function SearchEntryListPage() {
         </InlineStack>
       }
     >
-      <Card>
-        {loading ? (
-          <BlockStack align="center" inlineAlign="center" gap="400">
-            <Spinner accessibilityLabel="Loading entries" size="large" />
-          </BlockStack>
-        ) : (
-          <>
-            <div style={{ minHeight: '300px', minWidth: 'full' }}>
-              <IndexTable
-                resourceName={{ singular: 'product', plural: 'products' }}
-                itemCount={flatRows.length}
-                selectable={false}
-                headings={[
-                  { title: 'Product Title' },
-                  { title: 'Company' },
-                  { title: 'Car Name' },
-                  { title: 'Year' },
-                  { title: 'Vehicle_Type' },
-                  { title: 'View' },
-                  { title: 'Edit' },
-                ]}
-              >
-                {flatRows.map((row, index) => (
-                  <IndexTable.Row
-                    id={`${row.entryId}-${index}`}
-                    key={`${row.entryId}-${index}`}
-                    position={index}
-                  >
-                    <IndexTable.Cell>
-                      <a
-                        href={`https://${app?.config?.shop}/admin/products/${row.legacyResourceId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: '#1a73e8',
-                          textDecoration: 'underline',
-                          display: 'inline-block',
-                          maxWidth: '200px',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                        title={row.productTitle}
-                      >
-                        {row.productTitle.length > 20 ? row.productTitle.slice(0, 20) + '…' : row.productTitle}
-                      </a>
-                    </IndexTable.Cell>
-                    <IndexTable.Cell>{row.make}</IndexTable.Cell>
-                    <IndexTable.Cell>{row.model}</IndexTable.Cell>
-                    <IndexTable.Cell>{row.year}</IndexTable.Cell>
-                    <IndexTable.Cell>
-                      {row.vehicleType
-                        ? row.vehicleType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
-                        : '-'}
-                    </IndexTable.Cell>
-                    <IndexTable.Cell>
-                      <Button
-                        onClick={() => router.push(`/database/${row.legacyResourceId}/cars`)}
-                        size="slim"
-                      >
-                        View
-                      </Button>
-                    </IndexTable.Cell>
-                    <IndexTable.Cell>
-                      <Button
-                        onClick={() => router.push(`/database/${row.entryId}/edit`)}
-                        size="slim"
-                        variant="secondary"
-                      >
-                        Edit
-                      </Button>
-                    </IndexTable.Cell>
-                  </IndexTable.Row>
-                ))}
-              </IndexTable>
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
-                <Pagination
-                  hasPrevious={page > 1}
-                  onPrevious={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  hasNext={page < totalPages}
-                  onNext={() => setPage((prev) => prev + 1)}
-                />
-              </div>
-            )}
-
-            <div style={{ marginTop: '12px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
-              Page <strong>{page}</strong> of <strong>{totalPages}</strong> | Showing <strong>{entries.length}</strong> of <strong>{totalCount}</strong> total entries
-            </div>
-          </>
-        )}
-      </Card>
+      <ProductDatabaseTable
+        loading={loading}
+        flatRows={flatRows}
+        totalPages={totalPages}
+        page={page}
+        setPage={setPage}
+        totalCount={totalCount}
+        entriesCount={entries.length}
+        shop={shop}
+      />
     </Page>
   );
 }

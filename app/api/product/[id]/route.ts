@@ -4,7 +4,6 @@ import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
 import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
-import { makeModalEntry } from '@/lib/db/db-function';
 
 export async function GET(
   req: NextRequest,
@@ -32,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const id = params.id;
     const body = await req.json();
-    const { startFrom, end, make, model, products, vehicleType, shop } = body;
+    const { startFrom, end, make, model, products, driveType,engineType, shop } = body;
 
     const session = await findSessionByShop(shop);
     if (!session) {
@@ -162,7 +161,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         end,
         make,
         model,
-        vehicleType,
+        driveType,
+        engineType,
         products: retainedProducts as any[],
         updatedAt: new Date(),
       },

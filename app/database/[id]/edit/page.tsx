@@ -11,24 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { GET_PRODUCTS_QUERY } from '@/lib/graphql/queries';
 import { useIndexResourceState } from '@shopify/polaris';
-
-interface Product {
-  id: string;
-  title: string;
-  legacyResourceId: string;
-  gid: string;
-  [key: string]: any;
-}
-
-interface EntryData {
-  id: string;
-  startFrom: string;
-  end: string;
-  make: string;
-  model: string;
-  vehicleType: string;
-  products: Product[];
-}
+import { EntryData, Product } from '@/types/interfaces';
 
 export default function EditSearchEntryPage() {
   const { id } = useParams();
@@ -39,7 +22,7 @@ export default function EditSearchEntryPage() {
   const [yearTo, setYearTo] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
-  const [vehicleType, setVehicleType] = useState('2-wheeler');
+  const [driveType, setdriveType] = useState('2-wheeler');
   const [products, setProducts] = useState<Product[]>([]);
   const [allFetchedProducts, setAllFetchedProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,17 +30,17 @@ export default function EditSearchEntryPage() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
+  const [engineType,setEngineType]=useState('')
   const { selectedResources, handleSelectionChange } = useIndexResourceState(allFetchedProducts);
 
   const yearOptions = Array.from({ length: 2025 - 2000 + 1 }, (_, i) => {
     const value = (2000 + i).toString();
     return { label: value, value };
   });
-
-  const vehicleOptions = [
-    { label: '2-wheeler', value: '2-wheeler' },
-    { label: '4-wheeler', value: '4-wheeler' },
+const driveTypeOptions = [
+    { label: 'AWD', value: 'AWD' },
+    { label: 'FWD', value: 'FWD' },
+    { label: 'RWD', value: 'RWD' },
   ];
 
   useEffect(() => {
@@ -71,7 +54,8 @@ export default function EditSearchEntryPage() {
         setYearTo(data.end);
         setMake(data.make);
         setModel(data.model);
-        setVehicleType(data.vehicleType || '2-wheeler');
+        setdriveType(data.driveType || 'AWD');
+        setEngineType(data.engineType)
         setProducts(data.products || []);
       })
       .catch((err) => console.error('Error fetching entry:', err))
@@ -151,7 +135,8 @@ export default function EditSearchEntryPage() {
         end: yearTo,
         make,
         model,
-        vehicleType,
+        driveType,
+        engineType,
         products,
         shop,
       };
@@ -190,7 +175,9 @@ export default function EditSearchEntryPage() {
               <Select label="Year To" options={yearOptions} value={yearTo} onChange={setYearTo} />
               <TextField label="Make" value={make} onChange={(val) => setMake(val.charAt(0).toUpperCase() + val.slice(1))} autoComplete='off' />
               <TextField label="Model" value={model} onChange={(val) => setModel(val.charAt(0).toUpperCase() + val.slice(1))} autoComplete='off' />
-              <Select label="Vehicle Type" options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />
+              <Select label="Vehicle Type" options={driveTypeOptions} value={driveType} onChange={setdriveType} />
+              <TextField label="Engine Type"  value={engineType} onChange={setEngineType} autoComplete='off' />
+
             </InlineStack>
           )}
         </BlockStack>
@@ -242,7 +229,7 @@ export default function EditSearchEntryPage() {
         </div>
       </Card>
 
-      <Modal
+      {/* <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Add Products"
@@ -282,7 +269,7 @@ export default function EditSearchEntryPage() {
             </IndexTable>
           </div>
         </Modal.Section>
-      </Modal>
+      </Modal> */}
     </Page>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
-
+import { CarEntry } from '@/types/interfaces';
+import { LIMIT } from '@/utils/config/constant';
 import {
   Page,
   IndexTable,
@@ -13,16 +14,6 @@ import {
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-interface CarEntry {
-  id: string;
-  startFrom: string;
-  end: string;
-  make: string;
-  model: string;
-  vehicleType?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function ProductCarsPage() {
   const { id } = useParams();
@@ -33,19 +24,18 @@ export default function ProductCarsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount,setTotalCount]=useState()
-  const pageSize = 10;
   const router = useRouter()
   useEffect(() => {
     const fetchCars = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/product/${id}/cars?page=${currentPage}&pageSize=${pageSize}`);
+        const res = await fetch(`/api/product/${id}/cars?page=${currentPage}&pageSize=${LIMIT}`);
         if (!res.ok) throw new Error('Failed to fetch product cars');
         const data = await res.json();
         setEntries(data.entries || []);
         setProductTitle(data.productTitle || null);
         setTotalCount(data.totalCount);
-        setTotalPages(Math.ceil(data.totalCount / pageSize));
+        setTotalPages(Math.ceil(data.totalCount / LIMIT));
       } catch (error) {
         console.error('Error fetching cars:', error);
       } finally {
@@ -60,7 +50,7 @@ export default function ProductCarsPage() {
 
   const filteredEntries = entries.filter((entry) => {
     if (filterType === 'ALL') return true;
-    return normalize(entry.vehicleType || '') === normalize(filterType);
+    return normalize(entry.driveType || '') === normalize(filterType);
   });
 
   return (
@@ -110,8 +100,8 @@ export default function ProductCarsPage() {
                   <IndexTable.Cell>{entry.make}</IndexTable.Cell>
                   <IndexTable.Cell>{entry.model}</IndexTable.Cell>
                   <IndexTable.Cell>
-                    {entry.vehicleType
-                      ? entry.vehicleType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
+                    {entry.driveType
+                      ? entry.driveType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
                       : '-'}
                   </IndexTable.Cell>
                 </IndexTable.Row>
