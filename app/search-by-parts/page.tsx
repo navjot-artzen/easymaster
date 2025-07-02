@@ -203,7 +203,7 @@ export default function SearchTablePage() {
       year: normalizeYear(entry.years),
       make: entry.make,
       model: entry.model,
-      engineType: entry.engineOptions,
+      engineType: formatEngineOptions(entry.engineOptions),
       driveType: entry.drive,
       products: selectedProducts.map((p) => ({
         title: p.title,
