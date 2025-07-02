@@ -9,6 +9,7 @@ import {
   useIndexResourceState,
   Spinner,
   BlockStack,
+  Button,
 } from '@shopify/polaris';
 import { SearchListIcon } from '@shopify/polaris-icons';
 import { Product, ProductModalProps } from '@/types/interfaces';
@@ -20,19 +21,19 @@ export default function ProductModal({
   searchTerm,
   setSearchTerm,
   onAdd,
-}: ProductModalProps) {
+  singleSelect = false, // <-- new optional prop
+}: ProductModalProps & { singleSelect?: boolean }) {
   const [localLoading, setLocalLoading] = useState(true);
+  const [selected, setSelected] = useState<string[]>([]); // used only in singleSelect
 
-  // Simulate internal loading (you can customize this based on your real async logic)
   useEffect(() => {
     if (open) {
       setLocalLoading(true);
-      const timer = setTimeout(() => {
-        setLocalLoading(false);
-      }, 500); // simulate loading delay
+      setSelected([]); // clear previous selection on modal open
+      const timer = setTimeout(() => setLocalLoading(false), 500);
       return () => clearTimeout(timer);
     }
-  }, [open, products]);
+  }, [open]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) =>
@@ -46,22 +47,63 @@ export default function ProductModal({
     handleSelectionChange,
   } = useIndexResourceState<Product>(filteredProducts);
 
+  const handleRowClick = (id: string) => {
+    if (singleSelect) {
+      onAdd([filteredProducts.find((p) => p.id === id)!]);
+      onClose();
+    }
+  };
+
+  const renderRows = () =>
+    filteredProducts.map(({ id, title }, index) => {
+      const isSelected = singleSelect ? selected.includes(id) : selectedResources.includes(id);
+      return (
+        <IndexTable.Row
+          id={id}
+          key={id}
+          position={index}
+          selected={isSelected}
+          onClick={() => (singleSelect ? handleRowClick(id) : undefined)}
+        >
+          <IndexTable.Cell>
+            <span
+              style={{
+                display: 'inline-block',
+                maxWidth: '200px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                verticalAlign: 'middle',
+                cursor: singleSelect ? 'pointer' : 'default',
+              }}
+            >
+              {title}
+            </span>
+          </IndexTable.Cell>
+        </IndexTable.Row>
+      );
+    });
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Add Products"
-      primaryAction={{
-        content: 'Add',
-        onAction: () => {
-          const selected = filteredProducts.filter((product) =>
-            selectedResources.includes(product.id)
-          );
-          onAdd(selected);
-          onClose();
-        },
-        disabled: localLoading,
-      }}
+      primaryAction={
+        singleSelect
+          ? undefined
+          : {
+              content: 'Add',
+              onAction: () => {
+                const selected = filteredProducts.filter((product) =>
+                  selectedResources.includes(product.id)
+                );
+                onAdd(selected);
+                onClose();
+              },
+              disabled: localLoading,
+            }
+      }
       secondaryActions={[{ content: 'Cancel', onAction: onClose }]}
     >
       <Modal.Section>
@@ -87,31 +129,9 @@ export default function ProductModal({
               }
               onSelectionChange={handleSelectionChange}
               headings={[{ title: 'Product' }]}
-              selectable
+              selectable={!singleSelect}
             >
-              {filteredProducts.map(({ id, title }, index) => (
-                <IndexTable.Row
-                  id={id}
-                  key={id}
-                  selected={selectedResources.includes(id)}
-                  position={index}
-                >
-                  <IndexTable.Cell>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        maxWidth: '200px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        verticalAlign: 'middle',
-                      }}
-                    >
-                      {title}
-                    </span>
-                  </IndexTable.Cell>
-                </IndexTable.Row>
-              ))}
+              {renderRows()}
             </IndexTable>
           )}
         </div>

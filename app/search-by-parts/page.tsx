@@ -20,8 +20,6 @@ import ProductModal from '../components/Modal/ProductModal';
 import { EditModal } from '../components/Modal/EditModal';
 import { Product } from '@/types/interfaces';
 import { useRouter } from 'next/navigation';
-import { Toast } from '@shopify/polaris/build/ts/src/components/Frame/components';
-import { isErrored } from 'stream';
 
 interface VehicleEntry {
   make: string;
@@ -37,7 +35,6 @@ interface VehicleEntry {
 export default function SearchTablePage() {
   const [inputValue, setInputValue] = useState('');
   const [note, setNote] = useState('');
-
   const [inputError, setInputError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [clicked, setClicked] = useState(false);
@@ -48,20 +45,27 @@ export default function SearchTablePage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editData, setEditData] = useState<{ make: string; model: string; years: string }>({ make: '', model: '', years: '' });
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+ const [editData, setEditData] = useState<{ make: string; model: string; years: string,engineOptions?: string;
+  drive?: string }>({ make: '', model: '', years: '',engineOptions: '',
+  drive: '' });  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [lockedEntries, setLockedEntries] = useState<VehicleEntry[]>([]);
   const [saveLoading, setSaveLoading] = useState(false);
 
   const app = useAppBridge();
-  const normalizeYear = (year: string) => year.replace(/[–—−]/g, '-').replace(/\s+/g, '');
   const router = useRouter();
+
+  const normalizeYear = (year: string) => year.replace(/[–—−]/g, '-').replace(/\s+/g, '');
+
   const handleEdit = (index: number) => {
     const entry = tableData[index];
     setEditIndex(index);
-    setEditData(entry);
+    setEditData({
+      ...entry,
+      engineOptions: formatEngineOptions(entry.engineOptions),
+    });
     setEditModalOpen(true);
   };
+
 
   const handleUpdateEntry = (updated: {
     make: string;
@@ -81,23 +85,33 @@ export default function SearchTablePage() {
     setEditModalOpen(false);
     setEditIndex(null);
   };
-function formatEngineOptions(value: unknown): string {
-  if (!value) return '-';
 
-  if (Array.isArray(value)) {
-    return value.filter(Boolean).join(', ');
+  // ✅ Updated Function: Cleans engineOptions to show only up to 'L'
+  function formatEngineOptions(value: unknown): string {
+    if (!value) return '-';
+
+    const cleanSingle = (str: string): string => {
+      const match = str.match(/[^,\s]+L/i); // captures '4.5L' etc.
+      return match ? match[0].toUpperCase() : str;
+    };
+
+    if (Array.isArray(value)) {
+      return value
+        .filter(Boolean)
+        .map((item) => cleanSingle(item.toString()))
+        .join(', ');
+    }
+
+    if (typeof value === 'string') {
+      return value
+        .split(/[,;\s]+/)
+        .filter(Boolean)
+        .map(cleanSingle)
+        .join(', ');
+    }
+
+    return '-';
   }
-
-  if (typeof value === 'string') {
-    return value
-      .split(/[,;\s]+/)
-      .filter(Boolean)
-      .join(', ');
-  }
-
-  return '-';
-}
-
 
   const handleClear = () => {
     setInputValue('');
@@ -136,7 +150,6 @@ function formatEngineOptions(value: unknown): string {
         note,
       }));
 
-      // Merge locked entries
       const mergedData = [...lockedEntries, ...normalizedData].filter(
         (entry, index, self) =>
           index === self.findIndex(
@@ -147,15 +160,14 @@ function formatEngineOptions(value: unknown): string {
       setTableData(mergedData);
     } catch (err) {
       console.error('Search error:', err);
-      setTableData(lockedEntries); // fallback to locked
+      setTableData(lockedEntries);
     }
 
     setLoading(false);
   };
 
   const handleDelete = (index: number) => {
-    const confirmDelete = confirm('Are you sure you want to delete this entry?');
-    if (confirmDelete) {
+    if (confirm('Are you sure you want to delete this entry?')) {
       setTableData((prev) => prev.filter((_, i) => i !== index));
     }
   };
@@ -184,8 +196,6 @@ function formatEngineOptions(value: unknown): string {
 
   const handleSave = async () => {
     const shop = (app as any)?.config?.shop;
-    const toast = app?.toast
-
     if (!shop) return;
     setSaveLoading(true);
 
@@ -205,18 +215,16 @@ function formatEngineOptions(value: unknown): string {
     try {
       const res = await axios.post('/api/product/add', payload);
       if (res.status === 200) {
-        toast.show("Data saved successfully");
+        app.toast?.show('Data saved successfully');
         router.push('/database');
       }
     } catch (err) {
-
       console.error('Save error:', err);
-    }
-    finally {
+    } finally {
       setSaveLoading(false);
     }
-
   };
+
   const toggleLock = (index: number) => {
     const updated = [...tableData];
     updated[index].locked = !updated[index].locked;
@@ -227,6 +235,7 @@ function formatEngineOptions(value: unknown): string {
     setLockedEntries(locked);
     setTableData([...locked, ...unlocked]);
   };
+
   return (
     <Page title="Search Compatible Vehicle by Part Number">
       <div style={{ display: 'flex', justifyContent: 'start' }}>
@@ -246,7 +255,6 @@ function formatEngineOptions(value: unknown): string {
                   error={inputError}
                 />
               </div>
-
               <div style={{ flexGrow: 1 }}>
                 <TextField
                   label="Note"
@@ -256,11 +264,9 @@ function formatEngineOptions(value: unknown): string {
                   autoComplete="off"
                 />
               </div>
-
               <div style={{ alignSelf: 'flex-start', marginTop: '23px' }}>
                 <Button onClick={handleSubmit}>Search</Button>
               </div>
-
               <div style={{ alignSelf: 'flex-start', marginTop: '23px' }}>
                 <Button tone="critical" onClick={handleClear}>Clear</Button>
               </div>
@@ -298,28 +304,13 @@ function formatEngineOptions(value: unknown): string {
                       <IndexTable.Cell>{part.make}</IndexTable.Cell>
                       <IndexTable.Cell>{part.model}</IndexTable.Cell>
                       <IndexTable.Cell>{part.years}</IndexTable.Cell>
-                      <IndexTable.Cell>
-  {formatEngineOptions(part.engineOptions)}
-</IndexTable.Cell>
-
+                      <IndexTable.Cell>{formatEngineOptions(part.engineOptions)}</IndexTable.Cell>
                       <IndexTable.Cell>{part.drive || '-'}</IndexTable.Cell>
                       <IndexTable.Cell>
                         <InlineStack gap="200">
-                          <Button
-                            icon={<Icon source={EditIcon} tone="base" />}
-                            onClick={() => handleEdit(index)}
-                            size="slim"
-                          />
-                          <Button
-                            icon={<Icon source={DeleteIcon} tone="critical" />}
-                            onClick={() => handleDelete(index)}
-                            size="slim"
-                          />
-                          <Button
-                            icon={<Icon source={part.locked ? MinusIcon : LockIcon} />}
-                            onClick={() => toggleLock(index)}
-                            size="slim"
-                          />
+                          <Button icon={<Icon source={EditIcon} tone="base" />} onClick={() => handleEdit(index)} size="slim" />
+                          <Button icon={<Icon source={DeleteIcon} tone="critical" />} onClick={() => handleDelete(index)} size="slim" />
+                          <Button icon={<Icon source={part.locked ? MinusIcon : LockIcon} />} onClick={() => toggleLock(index)} size="slim" />
                         </InlineStack>
                       </IndexTable.Cell>
                     </IndexTable.Row>
@@ -327,7 +318,6 @@ function formatEngineOptions(value: unknown): string {
                 </IndexTable>
               </Card>
 
-              {/* Add Products Button */}
               <div style={{ marginTop: '16px', textAlign: 'left' }}>
                 <Button
                   onClick={() => {
@@ -335,11 +325,10 @@ function formatEngineOptions(value: unknown): string {
                     setModalOpen(true);
                   }}
                 >
-                  Add Products
+                  {selectedProducts.length > 0 ? 'Replace Product' : 'Add Product'}
                 </Button>
               </div>
 
-              {/* Show selected products */}
               {selectedProducts.length > 0 && (
                 <div style={{ marginTop: '12px' }}>
                   <strong>Selected Products:</strong>
@@ -351,12 +340,12 @@ function formatEngineOptions(value: unknown): string {
                 </div>
               )}
 
-              {/* Save Button */}
               {selectedProducts.length > 0 && (
                 <div style={{ marginTop: '16px', textAlign: 'right' }}>
                   <Button onClick={handleSave} variant="primary" disabled={saveLoading} loading={saveLoading}>
                     {saveLoading ? 'Saving...' : 'Save'}
-                  </Button>                </div>
+                  </Button>
+                </div>
               )}
             </>
           )}
@@ -377,6 +366,7 @@ function formatEngineOptions(value: unknown): string {
         products={products}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        singleSelect={true}
         onAdd={(selected) => {
           setSelectedProducts(selected);
           setModalOpen(false);

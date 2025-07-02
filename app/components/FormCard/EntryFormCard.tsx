@@ -39,7 +39,7 @@ export function EntryFormCard({
       <BlockStack gap="200">
         {/* Top row - year, make, model */}
         <InlineStack gap="300" wrap={false}>
-          <div style={{ minWidth: '120px'}}>
+          <div style={{ minWidth: '110px', flexGrow:1}}>
             <Select
               label="From Year"
               options={yearOptions}
@@ -48,7 +48,7 @@ export function EntryFormCard({
               error={validationErrors.yearFrom}
             />
           </div>
-          <div style={{ minWidth: '120px',flexGrow:1  }}>
+          <div style={{ minWidth: '110px',flexGrow:1  }}>
             <Select
               label="To Year"
               options={yearOptions}
@@ -57,7 +57,7 @@ export function EntryFormCard({
               error={validationErrors.yearTo}
             />
           </div>
-          <div style={{ minWidth: '100px'  }}>
+          <div style={{ minWidth: '110px'  }}>
             <TextField
               label="Make"
               value={make}
@@ -67,7 +67,7 @@ export function EntryFormCard({
               error={validationErrors.make}
             />
           </div>
-          <div style={{ minWidth: '100px',}}>
+          <div style={{ minWidth: '110px',}}>
             <TextField
               label="Model"
               value={model}
@@ -81,7 +81,7 @@ export function EntryFormCard({
 
         {/* Bottom row - engine type, drive type, add button */}
         <InlineStack gap="300" wrap={false}>
-          <div style={{ minWidth: '100px',flexGrow:1 }}>
+          <div style={{ minWidth: '120px',flexGrow:1 }}>
             <TextField
               label="Engine Type"
               value={engineType}
@@ -91,7 +91,7 @@ export function EntryFormCard({
               error={validationErrors.engineType}
             />
           </div>
-          <div style={{ minWidth: '100px',flexGrow:1 }}>
+          <div style={{ minWidth: '120px',flexGrow:1 }}>
             <Select
               label="Drive Type"
               options={driveTypeOptions}
