@@ -97,7 +97,7 @@ export interface SelectedProductsCardProps {
 
 export interface UploadedFile {
   id: string;
-  error: any;
+  error?: string | null;
   fileName: string;
   url: string;
   description?: string;
