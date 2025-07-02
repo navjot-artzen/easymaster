@@ -1,7 +1,6 @@
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  Page,
   Card,
   Button,
   DropZone,
@@ -11,8 +10,7 @@ import {
   SkeletonBodyText,
   SkeletonDisplayText,
   Spinner,
-  IndexTable,
-  Badge,
+  InlineStack,
 } from "@shopify/polaris";
 import { UploadedFile } from "@/types/interfaces";
 
@@ -21,42 +19,20 @@ export function UploadForm({
   onUploadSuccess,
   setHasFiles,
   setUploadedFiles,
-  refreshProgress,
-  setTableLoading,
+  loading,
 }: {
   visible: boolean;
   onUploadSuccess: () => void;
   setHasFiles: (value: boolean) => void;
   setUploadedFiles: (
-    files: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[])
+    files: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[]),
   ) => void;
-  refreshProgress: () => void;
-  setTableLoading: (value: boolean) => void;
+  loading: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const app = useAppBridge();
-
-  const fetchFiles = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    const shop = app?.config?.shop;
-    if (shop) {
-      const res = await fetch(`/api/upload-csv?shop=${shop}`);
-      const data = await res.json();
-      setUploadedFiles(data);
-      setHasFiles(data.length > 0);
-    }
-    setLoading(false);
-    setTableLoading(false);
-  };
-
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
   const handleDropZoneDrop = (_: File[], accepted: File[]) => {
     const selected = accepted[0];
     if (selected && selected.type === "text/csv") {
@@ -93,22 +69,20 @@ export function UploadForm({
       const result = await res.json();
       if (res.ok) {
         const newEntry: UploadedFile = {
-          id: result.id || crypto.randomUUID(), 
-          fileName: result.name,
-          url: result.url,
-          description: `Uploaded: ${result.name}`,
-          active: result.active ?? false,
-          isProcessed: result.isProcessed ?? false,
-          error: result.error ?? null, 
+          id: result.csvFile.id,
+          fileName: result.csvFile.name,
+          url: result.csvFile.url,
+          active: result.csvFile.active || false,
+          isProcessed: result.csvFile.isProcessed || false,
+          totalRecords: result.csvFile.totalRecords || "N/A",
         };
         setUploadedFiles((prev) =>
-          Array.isArray(prev) ? [newEntry, ...prev] : [newEntry]
+          Array.isArray(prev) ? [newEntry, ...prev] : [newEntry],
         );
         setHasFiles(true);
         toast.show("CSV file uploaded successfully.");
         setFile(null);
         onUploadSuccess();
-        refreshProgress();
       } else {
         setError(result.message || "Failed to upload.");
       }
@@ -154,14 +128,20 @@ export function UploadForm({
             {error}
           </Banner>
         )}
+        <InlineStack gap="400" wrap={false} blockAlign="center">
+          <Button onClick={onUploadSuccess} variant="secondary" tone="critical">
+            Cancel
+          </Button>
 
-        <Button
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          loading={uploading}
-        >
-          Upload CSV
-        </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!file || uploading}
+            loading={uploading}
+            variant="primary"
+          >
+            Upload CSV
+          </Button>
+        </InlineStack>
       </BlockStack>
     </Card>
   );

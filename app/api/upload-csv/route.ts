@@ -17,6 +17,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get('file') as File;
   const shop = formData.get('shop') as string | null;
   const text = await file.text();
+
+  if (!file || file.type !== 'text/csv') {
+    return NextResponse.json({ message: 'Only CSV files are allowed.' }, { status: 400 });
+  }
+  
   const records = parse(text, { columns: true, skip_empty_lines: true });
   const rawRows = parse(text, { columns: false, skip_empty_lines: true });
   const csvHeader = rawRows[0];

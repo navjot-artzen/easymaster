@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Page,
-} from "@shopify/polaris";
+import { Page } from "@shopify/polaris";
 import { useRouter } from "next/navigation";
 import { UploadForm } from "@/app/components/UploadCSV/UploadForm";
 import { CsvProgress, UploadedFile } from "@/types/interfaces";
@@ -91,19 +89,18 @@ export default function UploadCsvPage() {
       primaryAction={
         hasFiles && !formVisible
           ? {
-            content: "New File",
-            onAction: () => setFormVisible(true),
-          }
+              content: "New File",
+              onAction: () => setFormVisible(true),
+            }
           : undefined
       }
     >
       <UploadForm
+        loading={loading}
         visible={!hasFiles || formVisible}
         onUploadSuccess={() => setFormVisible(false)}
         setHasFiles={setHasFiles}
         setUploadedFiles={setUploadedFiles}
-        refreshProgress={fetchProgress}
-        setTableLoading={setTableLoading}
       />
 
       {!formVisible && hasFiles && (
