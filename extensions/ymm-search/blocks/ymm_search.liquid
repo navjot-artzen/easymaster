@@ -33,7 +33,7 @@
       </select>
       <div id="year-error" class="ymm-error-message"></div>
     </div>
-    
+
     <div class="field-wrapper">
       <select id="ymm-drive" class="ymm-dropdown" disabled>
         <option value="">- Drive Type -</option>
@@ -41,11 +41,11 @@
         <option value="FWD">FWD</option>
         <option value="RWD">RWD</option>
       </select>
-      {% comment %} <div id="drive-error" class="ymm-error-message"></div> {% endcomment %}
+      <div id="drive-error" class="ymm-error-message"></div>
     </div>
- <button id="ymm-search-btn" class="ymm-search-button" onclick="handleSearch()">Search</button>
+
+    <button id="ymm-search-btn" class="ymm-search-button" onclick="handleSearch()">Search</button>
     <a href="#" class="ymm-clear-link" onclick="clearFilters()">Clear filters</a>
-   
   </div>
 </div>
 
@@ -55,12 +55,25 @@
 
   function clearAllErrors() {
     ['vin-error', 'make-error', 'model-error', 'year-error', 'drive-error'].forEach(id => {
-      document.getElementById(id).textContent = '';
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '';
+        el.classList.remove('has-error');
+      }
     });
+  }
+
+  function showError(id, message) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = message;
+      el.classList.add('has-error');
+    }
   }
 
   function setLoading(buttonId, loading) {
     const button = document.getElementById(buttonId);
+    if (!button) return;
     button.disabled = loading;
     button.textContent = loading
       ? 'Searching...'
@@ -111,14 +124,10 @@
     makeSelect.addEventListener("change", () => {
       clearAllErrors();
       const selectedMake = makeSelect.value;
-      const modelSelect = document.getElementById("ymm-model");
-      const yearSelect = document.getElementById("ymm-year");
-      const driveSelect = document.getElementById("ymm-drive");
-
       modelSelect.innerHTML = '<option value="">- Model -</option>';
       modelSelect.disabled = true;
       yearSelect.disabled = true;
-      driveSelect.disabled = true;
+      document.getElementById("ymm-drive").disabled = true;
 
       if (!selectedMake || !ymmData[selectedMake]) return;
 
@@ -129,10 +138,10 @@
       modelSelect.disabled = false;
     });
 
-    document.getElementById("ymm-model").addEventListener("change", () => {
+    modelSelect.addEventListener("change", () => {
       clearAllErrors();
-      const enabled = !!document.getElementById("ymm-model").value;
-      document.getElementById("ymm-year").disabled = !enabled;
+      const enabled = !!modelSelect.value;
+      yearSelect.disabled = !enabled;
       document.getElementById("ymm-drive").disabled = !enabled;
     });
 
@@ -147,7 +156,7 @@
     const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
     if (!vin || vin.length !== 17) {
-      document.getElementById("vin-error").textContent = "Please enter a valid 17-character VIN.";
+      showError("vin-error", "Please enter a valid 17-character VIN.");
       setLoading('vin-search-btn', false);
       return;
     }
@@ -161,7 +170,7 @@
       const year = formattedData["Model Year"]?.toString() || "";
 
       if (!make || !model || !year) {
-        document.getElementById("vin-error").textContent = "Invalid vehicle data from VIN.";
+        showError("vin-error", "Invalid vehicle data from VIN.");
         setLoading('vin-search-btn', false);
         return;
       }
@@ -172,11 +181,11 @@
       if (exists) {
         window.location.href = `/collections/${defaultCollection}/${tag}`;
       } else {
-        document.getElementById("vin-error").textContent = "No products found for this vehicle.";
+        showError("vin-error", "No products found for this vehicle.");
       }
     } catch (err) {
       console.error("VIN lookup failed:", err);
-      document.getElementById("vin-error").textContent = "Error fetching data for VIN. Please try again.";
+      showError("vin-error", "Error fetching data for VIN. Please try again.");
     }
 
     setLoading('vin-search-btn', false);
@@ -194,22 +203,9 @@
 
     let hasError = false;
 
-    if (!make) {
-      document.getElementById("make-error").textContent = "Please select a make.";
-      hasError = true;
-    }
-    if (!model) {
-      document.getElementById("model-error").textContent = "Please select a model.";
-      hasError = true;
-    }
-    if (!year) {
-      document.getElementById("year-error").textContent = "Please select a year.";
-      hasError = true;
-    }
-    // if (!drive) {
-    //   document.getElementById("drive-error").textContent = "Please select drive type.";
-    //   hasError = true;
-    // }
+    if (!make) { showError("make-error", "Select make."); hasError = true; }
+    if (!model) { showError("model-error", "Select model."); hasError = true; }
+    if (!year) { showError("year-error", "Select year."); hasError = true; }
 
     if (hasError) {
       setLoading('ymm-search-btn', false);
@@ -222,7 +218,7 @@
     if (exists) {
       window.location.href = `/collections/${defaultCollection}/${tag}`;
     } else {
-      document.getElementById("make-error").textContent = "No products found for this vehicle.";
+      showError("make-error", "No products found.");
     }
 
     setLoading('ymm-search-btn', false);
