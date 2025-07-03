@@ -21,6 +21,7 @@ import ProductModal from '../components/Modal/ProductModal';
 import { EditModal } from '../components/Modal/EditModal';
 import { Product } from '@/types/interfaces';
 import { useRouter } from 'next/navigation';
+import { formatEngineOptions } from '@/utils/helper';
 
 interface VehicleEntry {
   make: string;
@@ -96,31 +97,7 @@ export default function SearchTablePage() {
   };
 
   // ✅ Updated Function: Cleans engineOptions to show only up to 'L'
-  function formatEngineOptions(value: unknown): string {
-    if (!value) return '-';
-
-    const cleanSingle = (str: string): string => {
-      const match = str.match(/[^,\s]+L/i); // captures '4.5L' etc.
-      return match ? match[0].toUpperCase() : str;
-    };
-
-    if (Array.isArray(value)) {
-      return value
-        .filter(Boolean)
-        .map((item) => cleanSingle(item.toString()))
-        .join(', ');
-    }
-
-    if (typeof value === 'string') {
-      return value
-        .split(/[,;\s]+/)
-        .filter(Boolean)
-        .map(cleanSingle)
-        .join(', ');
-    }
-
-    return '-';
-  }
+ 
 
   const handleClear = () => {
     setInputValue('');

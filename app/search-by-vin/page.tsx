@@ -16,6 +16,7 @@ import {
 export default function VinSearchPage() {
     const [vin, setVin] = useState('');
     const [vehicleData, setVehicleData] = useState<Record<string, string> | null>(null);
+    const [vehicleDatabygpt, setVehicleDatabyGpt] = useState<Record<string, string> | null>(null);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [inputError, setInputError] = useState<string | undefined>(undefined);
@@ -36,7 +37,8 @@ export default function VinSearchPage() {
             const response = await fetch(`/api/search-by-vin?vin=${vin}`);
             if (!response.ok) throw new Error(`API error: ${response.status}`);
             const result = await response.json();
-            setVehicleData(result.formattedData || null);
+            setVehicleDatabyGpt(result.gptSummary || null)
+            setVehicleData(result.decodedData || null);
         } catch (error) {
             console.error('VIN Search Error:', error);
             setVehicleData(null);
@@ -45,7 +47,7 @@ export default function VinSearchPage() {
             setSearched(true);
         }
     };
-
+    console.log("vehicle information:", vehicleDatabygpt)
     const handleClear = () => {
         setVin('');
         setVehicleData(null);
@@ -92,73 +94,62 @@ export default function VinSearchPage() {
                 </Card>
             )}
 
-            {!loading && vehicleData && (
-                <div style={{marginBottom:"50px"}}>
+            {!loading && vehicleData && vehicleDatabygpt && (
+                <div style={{ marginBottom: "50px" }}>
                     <Card>
-                    <BlockStack gap="400">
-                        <Text as="h2" variant="headingLg">Vehicle Information</Text>
-                        <Grid columns={{ xs: 1, sm: 2, md: 2, lg: 2 }}>
-                            {[
-                                'Make',
-                                'Model',
-                                'Model Year',
-                                'Trim',
-                                'Fuel Type - Primary',
-                                'Transmission Style',
-                                'Transmission Speeds',
-                                'Engine Number of Cylinders',
-                                'Displacement (L)',
-                                'Engine Model',
-                                'Body Class',
-                            ].map((field) =>
-                                vehicleData[field] ? (
-                                    <BlockStack key={field}>
-                                        <Text as="p" fontWeight="semibold">{field}</Text>
-                                        <Text as="p">{vehicleData[field]}</Text>
-                                    </BlockStack>
-                                ) : null
-                            )}
-                        </Grid>
+                        <BlockStack gap="400">
+                            <Text as="h2" variant="headingLg">Vehicle Information</Text>
+                            <Grid columns={{ xs: 1, sm: 2, md: 2, lg: 2 }}>
+                                {[
+                                    'make',
+                                    'model',
+                                    'year',
+                                    'trim',
+                                    'fuelType',
+                                    'transmission',
+                                    'driveType',
+                                    'engine',
+                                    'bodyClass',
+                                ].map((field) =>
+                                    vehicleDatabygpt[field] ? (
+                                        <BlockStack key={field}>
+                                            <Text as="p" fontWeight="semibold">  {field.charAt(0).toUpperCase() + field.slice(1).toLowerCase()}
+                                            </Text>
+                                            <Text as="p">{vehicleDatabygpt[field]}</Text>
+                                        </BlockStack>
+                                    ) : null
+                                )}
+                            </Grid>
 
-                        <details style={{ marginTop: '1rem' }}>
-                            <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
-                                View All Details
-                            </summary>
-                            <div style={{ marginTop: '1rem' }}>
-                                <Grid columns={{ xs: 1, sm: 2, md: 2, lg: 2 }}>
-                                    {Object.entries(vehicleData).map(([key, value]) => {
-                                        if (
-                                            [
-                                                'Make',
-                                                'Model',
-                                                'Model Year',
-                                                'Trim',
-                                                'Fuel Type - Primary',
-                                                'Transmission Style',
-                                                'Transmission Speeds',
-                                                'Engine Number of Cylinders',
-                                                'Displacement (L)',
-                                                'Engine Model',
-                                                'Body Class',
-                                                'Error Code',
-                                                'Error Text',
-                                            ].includes(key)
-                                        ) return null;
+                            <details style={{ marginTop: '1rem' }}>
+                                <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
+                                    Vehicle Information by NHTSA
+                                </summary>
+                                <div style={{ marginTop: '1rem' }}>
+                                    <Grid columns={{ xs: 1, sm: 2, md: 2, lg: 2 }}>
+                                        {Object.entries(vehicleData).map(([key, value]) => {
+                                            if (
+                                                [
 
-                                        return (
-                                            <BlockStack key={key} gap="100">
-                                                <Text as="p" fontWeight="semibold">{key}</Text>
-                                                <Text as="p">{value || 'N/A'}</Text>
-                                            </BlockStack>
-                                        );
-                                    })}
-                                </Grid>
-                            </div>
-                        </details>
-                    </BlockStack>
-                </Card>
+                                                    'Error Code',
+                                                    'Error Text',
+                                                ].includes(key)
+                                            ) return null;
+
+                                            return (
+                                                <BlockStack key={key} gap="100">
+                                                    <Text as="p" fontWeight="semibold">{key}</Text>
+                                                    <Text as="p">{value || 'N/A'}</Text>
+                                                </BlockStack>
+                                            );
+                                        })}
+                                    </Grid>
+                                </div>
+                            </details>
+                        </BlockStack>
+                    </Card>
                 </div>
-                
+
             )}
 
             {!loading && searched && !vehicleData && !inputError && (

@@ -50,7 +50,7 @@
 </div>
 
 <script>
-  const APP_BASE_url = "https://esaymaster.vercel.app";
+  const APP_BASE_url = "https://russia-blowing-thinkpad-categories.trycloudflare.com";
   let ymmData = {};
 
   function clearAllErrors() {
@@ -163,19 +163,19 @@
 
     try {
       const response = await fetch(`${APP_BASE_url}/api/search-by-vin?vin=${vin}`);
-      const { formattedData } = await response.json();
+      const { gptSummary } = await response.json();
 
-      const make = formattedData.Make?.toLowerCase().replace(/\s+/g, "-") || "";
-      const model = formattedData.Model?.toLowerCase().replace(/\s+/g, "-") || "";
-      const year = formattedData["Model Year"]?.toString() || "";
-
+      const make = gptSummary.make?.toLowerCase().replace(/\s+/g, "-") || "";
+      const model = gptSummary.model?.toLowerCase().replace(/\s+/g, "-") || "";
+      const year = gptSummary["year"]?.toString() || "";
+      const driveType=gptSummary.driveType.toLowerCase().replace(/\s+/g, "-") || ""
       if (!make || !model || !year) {
         showError("vin-error", "Invalid vehicle data from VIN.");
         setLoading('vin-search-btn', false);
         return;
       }
 
-      const tag = `${make}-${model}-${year}`;
+      const tag = driveType ? `${make}-${model}-${driveType}-${year}` :`${make}-${model}-${year}`;
       const exists = await checkProductTagExists(tag);
 
       if (exists) {
@@ -212,7 +212,7 @@
       return;
     }
 
-    const tag = `${make.trim().toLowerCase()}-${model.trim().toLowerCase()}-${year}-${drive.toLowerCase()}`;
+    const tag = drive?`${make.trim().toLowerCase()}-${model.trim().toLowerCase()}-${drive.toLowerCase()}-${year}`:`${make.trim().toLowerCase()}-${model.trim().toLowerCase()}-${year}`;
     const exists = await checkProductTagExists(tag);
 
     if (exists) {

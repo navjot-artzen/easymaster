@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
-import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
+import { generateMakeModelYearTags } from '@/utils/helper';
 
 export async function GET(
   req: NextRequest,

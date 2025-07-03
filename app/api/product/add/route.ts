@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import axios from 'axios';
 import { findSessionByShop } from '@/lib/db/session-storage';
 import { PRODUCT_UPDATE_MUTATION } from '@/lib/graphql/queries';
-import { generateMakeModelYearTags } from '@/utils/tagsgenerator';
+import { generateMakeModelYearTags } from '@/utils/helper';
 import { makeModalEntry } from '@/lib/db/db-function';
 import { ProductEntryInput } from '@/types/interfaces';
 
