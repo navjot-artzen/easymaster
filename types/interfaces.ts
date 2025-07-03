@@ -23,6 +23,7 @@ export interface Product {
 }
 
 export interface Entry {
+  note:string;
   from: string;
   to: string;
   make: string;
@@ -39,6 +40,7 @@ export interface EntryData {
   model: string;
   driveType: string;
   engineType: string;
+  note:string;
   products: Product[];
 }
 export interface CarEntry {
@@ -59,6 +61,7 @@ export interface ProductModalProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   onAdd: (selected: Product[]) => void;
+  singleSelect?: boolean;
 }
 export interface ValidationErrors {
   yearFrom?: string;
@@ -75,6 +78,7 @@ export interface EditEntryModalProps {
   model: string;
   driveType: string;
   engineType: string;
+  note:string;
   yearOptions: { label: string; value: string }[];
   driveTypeOptions: { label: string; value: string }[];
   validationErrors: Record<string, string | undefined>;
@@ -83,6 +87,7 @@ export interface EditEntryModalProps {
   setModel: (value: string) => void;
   setdriveType: (value: 'AWD' | 'FWD' | 'RWD') => void;
   setEngineType:(val: string) => void;
+  setNote:(value: string) => void;
   onUpdate: () => void;
   onCancel: () => void;
 }
@@ -127,6 +132,7 @@ export interface FlatProductRow {
   legacyResourceId: string;
   driveType?: string;
   engineType: string;
+  note?:string;
 }
 
 export interface EntryProps {
@@ -135,6 +141,7 @@ export interface EntryProps {
   model: string;
   driveType: string;
   engineType:string;
+  note:string;
   entries: Entry[];
   yearOptions: { label: string; value: string }[];
   driveTypeOptions: { label: string; value: string }[];
@@ -145,6 +152,7 @@ export interface EntryProps {
   onChangeModel: (value: string) => void;
   onChangedriveType: (value: 'AWD' | 'FWD' | 'RWD') => void;
   onChangeEngineType:(value:string)=>void
+  onChangeNote:(value:string)=>void
   onAddEntry: () => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
@@ -160,6 +168,7 @@ export interface ProductCarsTableProps {
   onPageChange: (page: number) => void;
 }
 export type ProductEntryInput = {
+  note: any;
   shop: string;
   year: string;
   make: string;
