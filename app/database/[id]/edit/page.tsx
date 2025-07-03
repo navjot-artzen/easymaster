@@ -22,6 +22,7 @@ export default function EditSearchEntryPage() {
   const [yearTo, setYearTo] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
+  const [note,setNote]=useState('')
   const [driveType, setdriveType] = useState('2-wheeler');
   const [products, setProducts] = useState<Product[]>([]);
   const [allFetchedProducts, setAllFetchedProducts] = useState<Product[]>([]);
@@ -56,6 +57,7 @@ const driveTypeOptions = [
         setModel(data.model);
         setdriveType(data.driveType || 'AWD');
         setEngineType(data.engineType)
+        setNote(data.note)
         setProducts(data.products || []);
       })
       .catch((err) => console.error('Error fetching entry:', err))
@@ -137,6 +139,7 @@ const driveTypeOptions = [
         model,
         driveType,
         engineType,
+        note,
         products,
         shop,
       };
@@ -177,6 +180,7 @@ const driveTypeOptions = [
               <TextField label="Model" value={model} onChange={(val) => setModel(val.charAt(0).toUpperCase() + val.slice(1))} autoComplete='off' />
               <Select label="Vehicle Type" options={driveTypeOptions} value={driveType} onChange={setdriveType} />
               <TextField label="Engine Type"  value={engineType} onChange={setEngineType} autoComplete='off' />
+              <TextField label="Note"  value={note} onChange={setNote} autoComplete='off' />
 
             </InlineStack>
           )}

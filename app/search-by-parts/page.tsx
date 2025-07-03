@@ -11,8 +11,9 @@ import {
   Button,
   InlineStack,
   Icon,
+  Tooltip,
 } from '@shopify/polaris';
-import { DeleteIcon, EditIcon, LockIcon, MinusIcon } from '@shopify/polaris-icons';
+import { DeleteIcon, EditIcon, InfoIcon, LockIcon, MinusIcon } from '@shopify/polaris-icons';
 import { useState } from 'react';
 import { GET_PRODUCTS_QUERY } from '@/lib/graphql/queries';
 import axios from 'axios';
@@ -29,6 +30,7 @@ interface VehicleEntry {
   drive?: string;
   note?: string;
   locked?: boolean;
+
   products?: Product[];
 }
 
@@ -45,9 +47,14 @@ export default function SearchTablePage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
- const [editData, setEditData] = useState<{ make: string; model: string; years: string,engineOptions?: string;
-  drive?: string }>({ make: '', model: '', years: '',engineOptions: '',
-  drive: '' });  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [editData, setEditData] = useState<{
+    make: string; model: string; years: string, engineOptions?: string;
+    drive?: string,note: string
+  }>({
+    make: '', model: '', years: '', engineOptions: '',
+    drive: '',note: ''
+  });
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [lockedEntries, setLockedEntries] = useState<VehicleEntry[]>([]);
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -62,10 +69,11 @@ export default function SearchTablePage() {
     setEditData({
       ...entry,
       engineOptions: formatEngineOptions(entry.engineOptions),
+        note: entry.note||''
     });
     setEditModalOpen(true);
   };
-
+  console.log("edited data:",editData)
 
   const handleUpdateEntry = (updated: {
     make: string;
@@ -73,6 +81,7 @@ export default function SearchTablePage() {
     years: string;
     engineOptions?: string;
     drive?: string;
+    note?:string;
   }) => {
     if (editIndex === null) return;
     const normalized = {
@@ -143,13 +152,11 @@ export default function SearchTablePage() {
       });
 
       const result = await response.json();
-
+      console.log("result data:", JSON.stringify(result))
       const normalizedData = (result.compatibleVehicles || []).map((entry: VehicleEntry) => ({
         ...entry,
         years: normalizeYear(entry.years),
-        note,
       }));
-
       const mergedData = [...lockedEntries, ...normalizedData].filter(
         (entry, index, self) =>
           index === self.findIndex(
@@ -205,6 +212,7 @@ export default function SearchTablePage() {
       model: entry.model,
       engineType: formatEngineOptions(entry.engineOptions),
       driveType: entry.drive,
+      note: entry.note,
       products: selectedProducts.map((p) => ({
         title: p.title,
         productId: p.id,
@@ -235,6 +243,7 @@ export default function SearchTablePage() {
     setLockedEntries(locked);
     setTableData([...locked, ...unlocked]);
   };
+  console.log("table data:", tableData);
 
   return (
     <Page title="Search Compatible Vehicle by Part Number">
@@ -295,7 +304,9 @@ export default function SearchTablePage() {
                     { title: 'Year' },
                     { title: 'Engine Type' },
                     { title: 'Drive Type' },
+                    { title: 'Notes' },
                     { title: 'Actions' },
+
                   ]}
                   selectable={false}
                 >
@@ -306,6 +317,18 @@ export default function SearchTablePage() {
                       <IndexTable.Cell>{part.years}</IndexTable.Cell>
                       <IndexTable.Cell>{formatEngineOptions(part.engineOptions)}</IndexTable.Cell>
                       <IndexTable.Cell>{part.drive || '-'}</IndexTable.Cell>
+                      <div style={{marginLeft:'0px'}}>
+                        <IndexTable.Cell>
+                          {part.note ? (
+                            <Tooltip content={part.note}>
+                              <Icon source={InfoIcon} tone="base" />
+                            </Tooltip>
+                          ) : (
+                            '-'
+                          )}
+                        </IndexTable.Cell>
+                      </div>
+
                       <IndexTable.Cell>
                         <InlineStack gap="200">
                           <Button icon={<Icon source={EditIcon} tone="base" />} onClick={() => handleEdit(index)} size="slim" />
@@ -313,6 +336,7 @@ export default function SearchTablePage() {
                           <Button icon={<Icon source={part.locked ? MinusIcon : LockIcon} />} onClick={() => toggleLock(index)} size="slim" />
                         </InlineStack>
                       </IndexTable.Cell>
+
                     </IndexTable.Row>
                   ))}
                 </IndexTable>

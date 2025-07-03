@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
           model: entry.model,
           driveType: entry.driveType,
           engineType:entry.engineType,
+          note:entry.note,
           products: entry.products.map((p) => ({
             title: p.title,
             gid: p.productId,
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end);
+      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end,entry.driveType);
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
         ymmTags.forEach((tag) => existingTags.add(tag));

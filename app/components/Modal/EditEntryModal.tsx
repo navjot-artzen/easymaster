@@ -11,6 +11,7 @@ export default function EditEntryModal({
   model,
   driveType,
   engineType,
+  note,
   yearOptions,
   driveTypeOptions,
   validationErrors,
@@ -19,6 +20,7 @@ export default function EditEntryModal({
   setModel,
   setdriveType,
   setEngineType,
+  setNote,
   onUpdate,
   onCancel,
 }: EditEntryModalProps) {
@@ -75,6 +77,14 @@ export default function EditEntryModal({
             autoComplete="off"
 
           />
+           <TextField
+            label="Note(Optional)"
+            value={note}
+            onChange={(val) => setNote(val)}
+            autoComplete="off"
+
+          />
+          
         </FormLayout>
       </Modal.Section>
     </Modal>

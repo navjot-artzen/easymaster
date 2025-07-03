@@ -28,7 +28,6 @@
   border: none;
   background-color: #f1f1f1;
   color: #333;
-  width: 25%;
   cursor: pointer;
 }
 
@@ -80,3 +79,16 @@
   cursor: pointer;
   font-weight: bold;
 }
+.field-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 25%;
+}
+
+.ymm-error-message {
+  color: red;
+  font-size: 13px;
+  min-height: 16px;
+  margin-top: 4px;
+}
+

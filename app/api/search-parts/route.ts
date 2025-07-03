@@ -29,6 +29,7 @@ Given the vehicle part number "${partNumber}", return a list of compatible vehic
     "years": "Year range like 2000–2006",
     "engineOptions": ["List", "of", "common", "engines"],
     "drive": "RWD/FWD/AWD",
+    "note": "Add note or comment Regarding parts fits in vehicle",
     "lugCount": 6
   }
 ]

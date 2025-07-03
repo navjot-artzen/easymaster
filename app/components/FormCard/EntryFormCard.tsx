@@ -19,6 +19,7 @@ export function EntryFormCard({
   model,
   driveType,
   engineType,
+  note,
   entries,
   yearOptions,
   driveTypeOptions,
@@ -29,6 +30,7 @@ export function EntryFormCard({
   onChangeModel,
   onChangedriveType,
   onChangeEngineType,
+  onChangeNote,
   onAddEntry,
   onEdit,
   onDelete,
@@ -39,7 +41,7 @@ export function EntryFormCard({
       <BlockStack gap="200">
         {/* Top row - year, make, model */}
         <InlineStack gap="300" wrap={false}>
-          <div style={{ minWidth: '110px', flexGrow:1}}>
+          <div style={{ minWidth: '110px', flexGrow: 1 }}>
             <Select
               label="From Year"
               options={yearOptions}
@@ -48,7 +50,7 @@ export function EntryFormCard({
               error={validationErrors.yearFrom}
             />
           </div>
-          <div style={{ minWidth: '110px',flexGrow:1  }}>
+          <div style={{ minWidth: '110px', flexGrow: 1 }}>
             <Select
               label="To Year"
               options={yearOptions}
@@ -57,7 +59,7 @@ export function EntryFormCard({
               error={validationErrors.yearTo}
             />
           </div>
-          <div style={{ minWidth: '110px'  }}>
+          <div style={{ minWidth: '110px' }}>
             <TextField
               label="Make"
               value={make}
@@ -67,7 +69,7 @@ export function EntryFormCard({
               error={validationErrors.make}
             />
           </div>
-          <div style={{ minWidth: '110px',}}>
+          <div style={{ minWidth: '110px', }}>
             <TextField
               label="Model"
               value={model}
@@ -81,7 +83,7 @@ export function EntryFormCard({
 
         {/* Bottom row - engine type, drive type, add button */}
         <InlineStack gap="300" wrap={false}>
-          <div style={{ minWidth: '120px',flexGrow:1 }}>
+          <div style={{ minWidth: '120px', flexGrow: 1 }}>
             <TextField
               label="Engine Type"
               value={engineType}
@@ -91,7 +93,7 @@ export function EntryFormCard({
               error={validationErrors.engineType}
             />
           </div>
-          <div style={{ minWidth: '120px',flexGrow:1 }}>
+          <div style={{ minWidth: '120px', flexGrow: 1 }}>
             <Select
               label="Drive Type"
               options={driveTypeOptions}
@@ -100,6 +102,15 @@ export function EntryFormCard({
                 onChangedriveType(selected as 'AWD' | 'FWD' | 'RWD')
               }
               error={validationErrors.driveType}
+            />
+          </div>
+          <div style={{ minWidth: '120px', flexGrow: 1 }}>
+            <TextField
+              label="Note(Optional)"
+              value={note}
+              onChange={onChangeNote}
+              autoComplete="off"
+              placeholder=""
             />
           </div>
           <div
@@ -125,6 +136,7 @@ export function EntryFormCard({
                 { title: 'Model' },
                 { title: 'Vehicle Type' },
                 { title: 'Engine Type' },
+                { title: 'Note' },
                 { title: 'Actions' },
               ]}
             >
@@ -136,6 +148,7 @@ export function EntryFormCard({
                   <IndexTable.Cell>{item.model}</IndexTable.Cell>
                   <IndexTable.Cell>{item.driveType}</IndexTable.Cell>
                   <IndexTable.Cell>{item.engineType}</IndexTable.Cell>
+                  <IndexTable.Cell>{item.note}</IndexTable.Cell>
                   <IndexTable.Cell>
                     <InlineStack>
                       <Button
@@ -157,10 +170,10 @@ export function EntryFormCard({
         )}
 
         {/* Save button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap:'10px' }}>
-               <Button onClick={onAddEntry} size="slim" variant="secondary">
-              Add More
-            </Button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <Button onClick={onAddEntry} size="slim" variant="secondary">
+            Add More
+          </Button>
           <Button
             variant="primary"
             onClick={onSave}
@@ -168,7 +181,7 @@ export function EntryFormCard({
             loading={isSaving}
           >
             {isSaving ? 'Saving...' : 'Save'}
-          </Button>       
+          </Button>
         </div>
       </BlockStack>
     </Card>

@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const id = params.id;
     const body = await req.json();
-    const { startFrom, end, make, model, products, driveType,engineType, shop } = body;
+    const { startFrom, end, make, model, products, driveType,engineType,note, shop } = body;
 
     const session = await findSessionByShop(shop);
     if (!session) {
@@ -48,10 +48,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       existingEntry.make,
       existingEntry.model,
       existingEntry.startFrom,
-      existingEntry.end
+      existingEntry.end,
+      existingEntry.driveType
     );
 
-    const newYmmTags = generateMakeModelYearTags(make, model, startFrom, end);
+    const newYmmTags = generateMakeModelYearTags(make, model, startFrom, end,driveType);
 
     const oldProductMap = new Map<string, any>(
       (existingEntry.products || []).map((p: any) => [p.legacyResourceId, p])
@@ -163,6 +164,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         model,
         driveType,
         engineType,
+        note,
         products: retainedProducts as any[],
         updatedAt: new Date(),
       },

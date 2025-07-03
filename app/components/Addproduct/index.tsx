@@ -24,6 +24,7 @@ export default function ProductTargetSelector() {
   const [year, setYear] = useState('2000-2000');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
+  const [note,setNote]=useState('');
   const [driveType, setdriveType] = useState<'AWD' | 'FWD' | 'RWD'>('AWD');
   const [isSaving, setIsSaving] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -76,19 +77,20 @@ export default function ProductTargetSelector() {
   const handleAddEntry = () => {
     if (!validateFields()) return;
     const [from, to] = year.split('-');
-    setEntries((prev) => [...prev, { from, to, make, model, driveType,engineType }]);
+    setEntries((prev) => [...prev, { from, to, make, model, driveType,engineType,note }]);
     setYear('');
     setMake('');
     setModel('');
     setdriveType('AWD');
     setEngineType('')
+    setNote(' ');
     setValidationErrors({});
   };
 
   const handleEditSave = () => {
     if (!validateFields()) return;
     const [from, to] = year.split('-');
-    const updated: Entry = { from, to, make, model, driveType,engineType };
+    const updated: Entry = { from, to, make, model, driveType,engineType,note };
     setEntries((prev) => prev.map((e, i) => (i === editIndex ? updated : e)));
     setEditModalOpen(false);
     setEditIndex(null);
@@ -97,6 +99,8 @@ export default function ProductTargetSelector() {
     setModel('');
     setdriveType('AWD');
     setEngineType('')
+        setNote(' ')
+
     setValidationErrors({});
   };
 
@@ -107,6 +111,7 @@ export default function ProductTargetSelector() {
     setModel(item.model);
     setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD');
     setEngineType(item.engineType)
+    setNote(item.note)
     setEditIndex(index);
     setEditModalOpen(true);
   };
@@ -125,7 +130,7 @@ export default function ProductTargetSelector() {
 
     if (isFormFilled && validateFields()) {
       const [from, to] = year.split('-');
-      const currentEntry = { from, to, make, model, driveType, engineType };
+      const currentEntry = { from, to, make, model, driveType, engineType,note };
       updatedEntries.push(currentEntry); // Don't wait for setEntries
     }
 
@@ -140,6 +145,7 @@ export default function ProductTargetSelector() {
       model: entry.model,
       driveType: entry.driveType,
       engineType: entry.engineType,
+      note:entry.note,
       products: selectedItems.map((item) => ({
         productId: item.id,
         title: item.title,
@@ -221,6 +227,7 @@ export default function ProductTargetSelector() {
               model={model}
               driveType={driveType}
               engineType={engineType}
+              note={note}
               entries={entries}
               yearOptions={yearOptions}
               driveTypeOptions={driveTypeOptions}
@@ -271,6 +278,10 @@ export default function ProductTargetSelector() {
                   setValidationErrors((prev)=>({...prev,engineType:undefined}))
                 }
               }}
+              onChangeNote={(val)=>{
+                const note=val
+                setNote(note);
+              }}
               onAddEntry={handleAddEntry}
               onEdit={openEditModal}
               onDelete={(index) =>
@@ -305,6 +316,7 @@ export default function ProductTargetSelector() {
             model={model}
             driveType={driveType}
             engineType={engineType}
+            note={note}
             yearOptions={yearOptions}
             driveTypeOptions={driveTypeOptions}
             validationErrors={validationErrors}
@@ -319,6 +331,7 @@ export default function ProductTargetSelector() {
             }}
             setdriveType={setdriveType}
             setEngineType={setEngineType}
+            setNote={setNote}
             onUpdate={handleEditSave}
             onCancel={() => {
               setEditModalOpen(false);

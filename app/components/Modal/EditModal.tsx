@@ -16,6 +16,7 @@ interface EditEntryModalProps {
     years: string;
     engineOptions?: string;
     drive?: string;
+    note?:string;
   };
   onClose: () => void;
   onSave: (updated: {
@@ -24,6 +25,7 @@ interface EditEntryModalProps {
     years: string;
     engineOptions?: string;
     drive?: string;
+    note?:string;
   }) => void;
 }
 
@@ -39,7 +41,7 @@ export function EditModal({
   const [to, setTo] = useState('');
   const [engineOptions, setEngineOptions] = useState('');
   const [driveType, setDriveType] = useState('');
-
+  const [note,setNote]=useState('')
   useEffect(() => {
     if (open && initialData) {
       setMake(initialData.make || '');
@@ -49,13 +51,14 @@ export function EditModal({
       setFrom(fromYear?.trim() || '');
       setTo(toYear?.trim() || '');
       setEngineOptions(initialData.engineOptions || '');
-      setDriveType(initialData.drive || '');
+      setDriveType(initialData.drive|| '');
+      setNote(initialData.note|| '')
     }
   }, [open, initialData]);
 
   const handleSave = () => {
     const years = `${from}-${to}`;
-    onSave({ make, model, years, engineOptions, drive: driveType });
+    onSave({ make, model, years, engineOptions, drive: driveType,note });
   };
 
   return (
@@ -94,8 +97,15 @@ export function EditModal({
         <Select
           label="Drive Type"
           value={driveType}
-          options={['', 'RWD', 'FWD', 'AWD', '4WD']}
+          options={[ 'RWD', 'FWD', 'AWD']}
           onChange={setDriveType}
+        />
+         <TextField
+          label="Note"
+          value={note}
+          onChange={setNote}
+          placeholder=""
+          autoComplete="off"
         />
       </Modal.Section>
     </Modal>

@@ -72,17 +72,18 @@ type Product {
 }
 
 model ProductsEntry {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  startFrom  String
-  end        String
-  make       String
-  model      String
-  driveType  String?
-  engineType Json?
-  shop       String
-  products   Product[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  startFrom      String
+  end            String
+  make           String
+  model          String
+  driveType      String?
+  engineType     Json  
+  note           String?
+  shop           String
+  products       Product[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@map("ProductsEntry")
 }

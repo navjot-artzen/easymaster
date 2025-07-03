@@ -8,7 +8,11 @@ import {
   BlockStack,
   Button,
   Pagination,
+  Tooltip,
+  Icon,
+  InlineStack,
 } from '@shopify/polaris';
+import { InfoIcon } from '@shopify/polaris-icons';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -54,6 +58,7 @@ export function ProductDatabaseTable({
                 { title: 'Year' },
                 { title: 'Engine_Type' },
                 { title: 'Drive_Type' },
+                { title: 'Note' },
                 { title: 'View' },
                 { title: 'Edit' },
               ]}
@@ -88,15 +93,28 @@ export function ProductDatabaseTable({
                   <IndexTable.Cell>{row.make}</IndexTable.Cell>
                   <IndexTable.Cell>{row.model}</IndexTable.Cell>
                   <IndexTable.Cell>{row.year}</IndexTable.Cell>
- <IndexTable.Cell>
-                        {Array.isArray(row.engineType)
-                          ? row.engineType.join(', ')
-                          : row.engineType || '-'}
-                      </IndexTable.Cell>                  <IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {Array.isArray(row.engineType)
+                      ? row.engineType.join(', ')
+                      : row.engineType || '-'}
+                  </IndexTable.Cell>                  <IndexTable.Cell>
                     {row.driveType
                       ? row.driveType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
                       : '-'}
                   </IndexTable.Cell>
+                  <InlineStack align='center' gap='050'>
+                    <IndexTable.Cell>
+                      {row.note ? (
+                        <Tooltip content={row.note}>
+                          <Icon source={InfoIcon} tone="base" />
+                        </Tooltip>
+                      ) : (
+                        '-'
+                      )}
+                    </IndexTable.Cell>
+                  </InlineStack>
+
+
                   <IndexTable.Cell>
                     <Button
                       onClick={() =>
