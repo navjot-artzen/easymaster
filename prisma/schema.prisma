@@ -78,7 +78,7 @@ model ProductsEntry {
   make           String
   model          String
   driveType      String?
-  engineType     Json  
+  engineType     Json? 
   note           String?
   shop           String
   products       Product[]
