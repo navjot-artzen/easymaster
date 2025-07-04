@@ -102,7 +102,7 @@ export function ProductDatabaseTable({
                       ? row.driveType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
                       : '-'}
                   </IndexTable.Cell>
-                  <InlineStack align='center' gap='050'>
+                      <div style={{marginLeft:'0px'}}>
                     <IndexTable.Cell>
                       {row.note ? (
                         <Tooltip content={row.note}>
@@ -112,8 +112,7 @@ export function ProductDatabaseTable({
                         '-'
                       )}
                     </IndexTable.Cell>
-                  </InlineStack>
-
+                    </div>
 
                   <IndexTable.Cell>
                     <Button

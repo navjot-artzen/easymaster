@@ -1,14 +1,28 @@
-export function generateMakeModelYearTags(make: string, model: string, start: string, end: string, driveType: any): string[] {
+export function generateMakeModelYearTags(
+  make: string,
+  model: string,
+  start: string,
+  end: string,
+  driveType: string,
+  engineTypes: string | string[]
+): string[] {
   const startYear = parseInt(start, 10);
   const endYear = parseInt(end, 10);
   const tags: string[] = [];
+  const engines = Array.isArray(engineTypes)
+    ? engineTypes
+    : engineTypes.split(',').map(e => e.trim());
 
-  for (let y = startYear; y <= endYear; y++) {
-    tags.push(`${make}-${model}-${driveType}-${y}`);
+  for (let year = startYear; year <= endYear; year++) {
+    for (const engine of engines) {
+      const safeEngine = engine.replace(/\./g, 'o'); // replace all `.` with `o`
+      tags.push(`${make}-${model}-${driveType}-${year}-${safeEngine}`);
+    }
   }
 
   return tags;
 }
+
 
 
  export function formatEngineOptions(value: unknown): string {

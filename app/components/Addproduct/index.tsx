@@ -204,6 +204,7 @@ export default function ProductTargetSelector() {
 
   return (
     <Page
+    fullWidth
       title="Product Target Selector"
       backAction={{ content: 'Back', onAction: () => router.push('/database') }}
     >

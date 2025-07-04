@@ -49,10 +49,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       existingEntry.model,
       existingEntry.startFrom,
       existingEntry.end,
-      existingEntry.driveType
+      existingEntry.driveType ??' ',
+      existingEntry.engineType as string
     );
 
-    const newYmmTags = generateMakeModelYearTags(make, model, startFrom, end,driveType);
+    const newYmmTags = generateMakeModelYearTags(make, model, startFrom, end,driveType,engineType);
 
     const oldProductMap = new Map<string, any>(
       (existingEntry.products || []).map((p: any) => [p.legacyResourceId, p])

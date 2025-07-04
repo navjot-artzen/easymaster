@@ -64,6 +64,7 @@ export default function SearchEntryListPage() {
 
   return (
     <Page
+    fullWidth
       title="Search entries & results"
       primaryAction={
         <InlineStack gap="400">

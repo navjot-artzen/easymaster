@@ -84,6 +84,7 @@ export default function UploadCsvPage() {
 
   return (
     <Page
+    fullWidth
       title="Upload CSV File"
       backAction={{ content: "Back", onAction: () => router.push("/database") }}
       primaryAction={

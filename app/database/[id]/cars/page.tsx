@@ -54,7 +54,7 @@ export default function ProductCarsPage() {
   });
 
   return (
-    <Page title={productTitle || 'Product Cars'}
+    <Page fullWidth title={productTitle || 'Product Cars'}
       backAction={{ content: 'Back', onAction: () => router.push('/database') }}
 
     >

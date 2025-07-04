@@ -156,6 +156,7 @@ const driveTypeOptions = [
 
   return (
     <Page
+    fullWidth
       title="Edit Search Entry"
       backAction={{ content: 'Back', url: '/database' }}
       primaryAction={{

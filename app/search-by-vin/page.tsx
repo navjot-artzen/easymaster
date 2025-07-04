@@ -56,7 +56,7 @@ export default function VinSearchPage() {
     };
 
     return (
-        <Page title="Search by VIN">
+        <Page fullWidth title="Search by VIN">
             <div style={{ display: 'flex', justifyContent: 'start' }}>
                 <div style={{ maxWidth: 1000, width: '100%' }}>
                     <Card>

@@ -223,7 +223,7 @@ export default function SearchTablePage() {
   console.log("table data:", tableData);
 
   return (
-    <Page title="Search Compatible Vehicle by Part Number">
+    <Page fullWidth title="Search Compatible Vehicle by Part Number">
       <div style={{ display: 'flex', justifyContent: 'start' }}>
         <div style={{ maxWidth: 1000, width: '100%' }}>
           <Card>

@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end,entry.driveType);
+      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end,entry.driveType,entry.engineType);
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
         ymmTags.forEach((tag) => existingTags.add(tag));
