@@ -34,6 +34,19 @@
       <div id="year-error" class="ymm-error-message"></div>
     </div>
 
+    <!-- Engine Type Field -->
+    <div class="field-wrapper">
+      <input
+        type="text"
+        id="ymm-engine"
+        class="ymm-dropdown"
+        placeholder="Enter Engine Type (e.g. 2.5L,3.5L)"
+        disabled
+      />
+      <div id="engine-error" class="ymm-error-message"></div>
+    </div>
+
+    <!-- Drive Type Field -->
     <div class="field-wrapper">
       <select id="ymm-drive" class="ymm-dropdown" disabled>
         <option value="">- Drive Type -</option>
@@ -50,11 +63,11 @@
 </div>
 
 <script>
-  const APP_BASE_url = "https://esaymaster.vercel.app";
+  const APP_BASE_url = "https://frames-rooms-collections-rows.trycloudflare.com";
   let ymmData = {};
 
   function clearAllErrors() {
-    ['vin-error', 'make-error', 'model-error', 'year-error', 'drive-error'].forEach(id => {
+    ['vin-error', 'make-error', 'model-error', 'year-error', 'drive-error', 'engine-error'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.textContent = '';
@@ -82,8 +95,6 @@
 
   function enableYmmForm() {
     document.getElementById('ymm-section').style.display = 'flex';
-    // document.getElementById('vin-input').disabled = true;
-    // document.getElementById('vin-search-btn').disabled = true;
   }
 
   async function checkProductTagExists(tag) {
@@ -128,6 +139,7 @@
       modelSelect.disabled = true;
       yearSelect.disabled = true;
       document.getElementById("ymm-drive").disabled = true;
+      document.getElementById("ymm-engine").disabled = true;
 
       if (!selectedMake || !ymmData[selectedMake]) return;
 
@@ -143,6 +155,7 @@
       const enabled = !!modelSelect.value;
       yearSelect.disabled = !enabled;
       document.getElementById("ymm-drive").disabled = !enabled;
+      document.getElementById("ymm-engine").disabled = !enabled;
     });
 
     document.getElementById("vin-input").addEventListener("input", clearAllErrors);
@@ -168,14 +181,30 @@
       const make = gptSummary.make?.toLowerCase().replace(/\s+/g, "-") || "";
       const model = gptSummary.model?.toLowerCase().replace(/\s+/g, "-") || "";
       const year = gptSummary["year"]?.toString() || "";
-      const driveType=gptSummary.driveType.toLowerCase().replace(/\s+/g, "-") || ""
+      const driveType = gptSummary.driveType?.toLowerCase().replace(/\s+/g, "-") || "";
+      let engineType = gptSummary.engine?.trim() || "";
+
+      if (engineType.toUpperCase().includes("L")) {
+  let match = engineType.toUpperCase().match(/[^ ]*L/);
+  if (match) engineType = match[0].toLowerCase();
+} else {
+  engineType = engineType.toLowerCase().replace(/\s+/g, "-");
+}
+
       if (!make || !model || !year) {
         showError("vin-error", "Invalid vehicle data from VIN.");
         setLoading('vin-search-btn', false);
         return;
       }
 
-      const tag = driveType ? `${make}-${model}-${driveType}-${year}` :`${make}-${model}-${year}`;
+      let tag = `${make}-${model}`;
+      if (driveType) tag += `-${driveType}`;
+      tag += `-${year}`;
+      if (engineType){
+        const safeEngine = engineType.replace(/\./g, 'o'); // replace all `.` with `o`
+        tag += `-${safeEngine}`;
+      } 
+
       const exists = await checkProductTagExists(tag);
 
       if (exists) {
@@ -195,10 +224,11 @@
     clearAllErrors();
     setLoading('ymm-search-btn', true);
 
-    const make = document.getElementById('ymm-make').value;
-    const model = document.getElementById('ymm-model').value;
+    const make = document.getElementById('ymm-make').value.trim().toLowerCase();
+    const model = document.getElementById('ymm-model').value.trim().toLowerCase();
     const year = document.getElementById('ymm-year').value;
-    const drive = document.getElementById('ymm-drive').value;
+    const drive = document.getElementById('ymm-drive').value.trim().toLowerCase();
+    const engine = document.getElementById('ymm-engine').value.trim().toLowerCase();
     const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
     let hasError = false;
@@ -212,7 +242,16 @@
       return;
     }
 
-    const tag = drive?`${make.trim().toLowerCase()}-${model.trim().toLowerCase()}-${drive.toLowerCase()}-${year}`:`${make.trim().toLowerCase()}-${model.trim().toLowerCase()}-${year}`;
+    let tag = `${make}-${model}`;
+    if (drive) tag += `-${drive}`;
+    tag += `-${year}`;
+
+    if (engine) {
+      const safeEngine = engine.replace(/\./g, 'o'); // replace all `.` with `o`
+
+      tag += `-${safeEngine}`;
+    }
+
     const exists = await checkProductTagExists(tag);
 
     if (exists) {
@@ -233,6 +272,8 @@
     document.getElementById('ymm-year').disabled = true;
     document.getElementById('ymm-drive').selectedIndex = 0;
     document.getElementById('ymm-drive').disabled = true;
+    document.getElementById('ymm-engine').value = '';
+    document.getElementById('ymm-engine').disabled = true;
 
     document.getElementById('vin-input').value = '';
     document.getElementById('vin-input').disabled = false;
