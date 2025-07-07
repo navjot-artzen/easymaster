@@ -4,7 +4,7 @@
   "main": "web/dist/index.js",
   "license": "MIT",
   "scripts": {
-    "next:dev":"next dev",
+    "next:dev": "next dev",
     "shopify": "shopify",
     "build": "next build",
     "dev": "shopify app dev",
@@ -33,6 +33,7 @@
     "@upstash/qstash": "^2.8.1",
     "@upstash/redis": "^1.35.0",
     "axios": "^1.9.0",
+    "cheerio": "^1.1.0",
     "csv-parse": "^5.6.0",
     "formidable": "^3.5.4",
     "mongodb": "^5.9.2",
