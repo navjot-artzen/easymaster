@@ -1,16 +1,15 @@
 'use client';
 
-import { GET_PRODUCTS_QUERY } from '@/lib/graphql/queries';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import {
   Page,
   BlockStack,
   Banner,
+  Button,
 } from '@shopify/polaris';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import ProductModal from '../Modal/ProductModal';
 import EditEntryModal from '../Modal/EditEntryModal';
 import { Entry, Product, ValidationErrors } from '@/types/interfaces';
 import { EntryFormCard } from '../FormCard/EntryFormCard';
@@ -18,13 +17,12 @@ import { SelectedProductsCard } from '../FormCard/SelectProductCard';
 
 export default function ProductTargetSelector() {
   const [selectedItems, setSelectedItems] = useState<Product[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [year, setYear] = useState('2000-2000');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
-  const [note,setNote]=useState('');
+  const [note, setNote] = useState('');
   const [driveType, setdriveType] = useState<'AWD' | 'FWD' | 'RWD'>('AWD');
   const [isSaving, setIsSaving] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -35,8 +33,11 @@ export default function ProductTargetSelector() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [engineType, setEngineType] = useState('');
+    const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+
   const router = useRouter();
   const app = useAppBridge();
+
 
   const yearOptions = Array.from({ length: 2025 - 2000 + 1 }, (_, i) => {
     const value = (2000 + i).toString();
@@ -67,30 +68,29 @@ export default function ProductTargetSelector() {
     if (!make.trim()) errors.make = 'Enter make';
     if (!model.trim()) errors.model = 'Enter model';
     if (!driveType) errors.driveType = 'Select vehicle type';
-    if(!engineType.trim()) errors.engineType = 'Enter engine type';
+    if (!engineType.trim()) errors.engineType = 'Enter engine type';
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-
   const handleAddEntry = () => {
     if (!validateFields()) return;
     const [from, to] = year.split('-');
-    setEntries((prev) => [...prev, { from, to, make, model, driveType,engineType,note }]);
+    setEntries((prev) => [...prev, { from, to, make, model, driveType, engineType, note }]);
     setYear('');
     setMake('');
     setModel('');
     setdriveType('AWD');
-    setEngineType('')
-    setNote(' ');
+    setEngineType('');
+    setNote('');
     setValidationErrors({});
   };
 
   const handleEditSave = () => {
     if (!validateFields()) return;
     const [from, to] = year.split('-');
-    const updated: Entry = { from, to, make, model, driveType,engineType,note };
+    const updated: Entry = { from, to, make, model, driveType, engineType, note };
     setEntries((prev) => prev.map((e, i) => (i === editIndex ? updated : e)));
     setEditModalOpen(false);
     setEditIndex(null);
@@ -98,9 +98,8 @@ export default function ProductTargetSelector() {
     setMake('');
     setModel('');
     setdriveType('AWD');
-    setEngineType('')
-        setNote(' ')
-
+    setEngineType('');
+    setNote('');
     setValidationErrors({});
   };
 
@@ -110,8 +109,8 @@ export default function ProductTargetSelector() {
     setMake(item.make);
     setModel(item.model);
     setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD');
-    setEngineType(item.engineType)
-    setNote(item.note)
+    setEngineType(item.engineType);
+    setNote(item.note);
     setEditIndex(index);
     setEditModalOpen(true);
   };
@@ -122,7 +121,6 @@ export default function ProductTargetSelector() {
       return alert('Shop information is missing.');
     }
 
-    // Try to collect current form data if filled and valid
     let updatedEntries = [...entries];
 
     const isFormFilled =
@@ -130,8 +128,8 @@ export default function ProductTargetSelector() {
 
     if (isFormFilled && validateFields()) {
       const [from, to] = year.split('-');
-      const currentEntry = { from, to, make, model, driveType, engineType,note };
-      updatedEntries.push(currentEntry); // Don't wait for setEntries
+      const currentEntry = { from, to, make, model, driveType, engineType, note };
+      updatedEntries.push(currentEntry);
     }
 
     if (selectedItems.length === 0 || updatedEntries.length === 0) {
@@ -145,7 +143,7 @@ export default function ProductTargetSelector() {
       model: entry.model,
       driveType: entry.driveType,
       engineType: entry.engineType,
-      note:entry.note,
+      note: entry.note,
       products: selectedItems.map((item) => ({
         productId: item.id,
         title: item.title,
@@ -156,10 +154,9 @@ export default function ProductTargetSelector() {
 
     try {
       const res = await axios.post('/api/product/add', payload);
-      console.log('Saved:', res.data);
       if (res?.data?.duplicateEntries?.length) {
-        console.log("message for :", res?.data?.duplicateEntries[0].message)
-        setApiError(res?.data?.duplicateEntries[0].message + `for ${res?.data?.duplicateEntries[0].make} ${res?.data?.duplicateEntries[0].model} ${res?.data?.duplicateEntries[0].year}`);
+        const msg = res.data.duplicateEntries[0];
+        setApiError(`${msg.message} for ${msg.make} ${msg.model} ${msg.year}`);
         return;
       }
       router.push('/database');
@@ -170,31 +167,39 @@ export default function ProductTargetSelector() {
       setIsSaving(false);
     }
   };
-  useEffect(() => {
-    const shop = (app as any)?.config?.shop;
-    if (!shop) return;
 
-    async function fetchProducts() {
-      try {
-        const res = await axios.post(`/api/getproduct?shop=${shop}`, {
-          query: GET_PRODUCTS_QUERY,
-        });
-        const productEdges = res.data?.data?.products?.edges || [];
-        const productNodes: Product[] = productEdges.map((edge: any) => ({
-          id: edge.node.id,
-          title: edge.node.title,
-        }));
-        setProducts(productNodes);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-      finally {
-        setLoading(false); // <- stop loading
-      }
+  // ✅ Use resource picker
+  const selectProducts = async () => {
+    
+    
+    try {
+       const initialSelection = selectedItems.map((product) => ({
+        id: product.id,
+        type: 'product',
+      }));
+      const { selection }:any = await window.shopify.resourcePicker({
+        type: 'product',
+        multiple: true,
+        action: 'select',
+        selectionIds: initialSelection,
+
+      });
+
+      const selected = selection.map((product: any) => ({
+        id: product.id,
+        title: product.title,
+        legacyResourceId: product.legacyResourceId,
+      }));
+      setSelectedItems(selected);
+
+      // setSelectedItems((prev) => [
+      //   ...prev.filter((item) => item.type !== 'products'),
+      //   ...selected,
+      // ]);
+    } catch (error) {
+      console.error('Error selecting products:', error);
     }
-
-    fetchProducts();
-  }, [app]);
+  };
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) =>
@@ -204,7 +209,7 @@ export default function ProductTargetSelector() {
 
   return (
     <Page
-    fullWidth
+      fullWidth
       title="Product Target Selector"
       backAction={{ content: 'Back', onAction: () => router.push('/database') }}
     >
@@ -213,7 +218,7 @@ export default function ProductTargetSelector() {
           <SelectedProductsCard
             selectedItems={selectedItems}
             showForm={showForm}
-            onAddClick={() => setModalOpen(true)}
+            onAddClick={selectProducts} // ✅ use resource picker
             onContinueClick={() => setShowForm(true)}
           />
           {apiError && (
@@ -248,8 +253,8 @@ export default function ProductTargetSelector() {
                   if (!from) errors.yearFrom = 'Select from year';
                   if (!to) errors.yearTo = 'Select to year';
                   if (from && to && fromYear > toYear) {
-                    errors.yearFrom = 'From year must be less than or equal to To year';
-                    errors.yearTo = 'To year must be greater than or equal to From year';
+                    errors.yearFrom = 'From year must be <= To year';
+                    errors.yearTo = 'To year must be >= From year';
                   } else {
                     delete errors.yearFrom;
                     delete errors.yearTo;
@@ -273,42 +278,18 @@ export default function ProductTargetSelector() {
               }}
               onChangedriveType={setdriveType}
               onChangeEngineType={(val) => {
-                const engineType = val;
-                setEngineType(engineType);
-                if(engineType){
-                  setValidationErrors((prev)=>({...prev,engineType:undefined}))
+                setEngineType(val);
+                if (val) {
+                  setValidationErrors((prev) => ({ ...prev, engineType: undefined }));
                 }
               }}
-              onChangeNote={(val)=>{
-                const note=val
-                setNote(note);
-              }}
+              onChangeNote={(val) => setNote(val)}
               onAddEntry={handleAddEntry}
               onEdit={openEditModal}
-              onDelete={(index) =>
-                setEntries((prev) => prev.filter((_, i) => i !== index))
-              }
+              onDelete={(index) => setEntries((prev) => prev.filter((_, i) => i !== index))}
               onSave={handleSave}
             />
           )}
-
-          <ProductModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            products={products}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            onAdd={(selected) => {
-              const selectedData = selected.map((p) => ({ ...p, type: 'products' }));
-              setSelectedItems((prev) => [
-                ...prev.filter((item) => item.type !== 'products'),
-                ...selectedData,
-              ]);
-              setModalOpen(false);
-
-            }}
-          />
-
 
           <EditEntryModal
             open={editModalOpen}
@@ -322,14 +303,8 @@ export default function ProductTargetSelector() {
             driveTypeOptions={driveTypeOptions}
             validationErrors={validationErrors}
             setYear={setYear}
-            setMake={(val) => {
-              const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
-              setMake(capitalized);
-            }}
-            setModel={(val) => {
-              const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
-              setModel(capitalized);
-            }}
+            setMake={(val) => setMake(val.charAt(0).toUpperCase() + val.slice(1))}
+            setModel={(val) => setModel(val.charAt(0).toUpperCase() + val.slice(1))}
             setdriveType={setdriveType}
             setEngineType={setEngineType}
             setNote={setNote}

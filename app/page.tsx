@@ -18,7 +18,7 @@ export default async function Page({
   //   return <h1>Missing Shop and Host Parameters</h1>;
   // }
 
-  // // verify hmac if we are doing an install
+  // verify hmac if we are doing an install
   // const redirectUri = await performChecks(
   //   shop as string,
   //   host as string,

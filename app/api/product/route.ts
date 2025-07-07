@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
         year: `${entry.startFrom} - ${entry.end}`,
         legacyResourceId: product.legacyResourceId,
         driveType: entry.driveType || 'ALL',
-        engineType:entry.engineType ,
+        engineType:entry.engineType,
         note:entry.note
       }))
     );

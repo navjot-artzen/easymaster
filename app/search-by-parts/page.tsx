@@ -13,15 +13,19 @@ import {
   Icon,
   Tooltip,
 } from '@shopify/polaris';
-import { DeleteIcon, EditIcon, InfoIcon, LockIcon, MinusIcon } from '@shopify/polaris-icons';
+import {
+  DeleteIcon,
+  EditIcon,
+  InfoIcon,
+  LockIcon,
+  MinusIcon,
+} from '@shopify/polaris-icons';
 import { useState } from 'react';
-import { GET_PRODUCTS_QUERY } from '@/lib/graphql/queries';
-import axios from 'axios';
-import ProductModal from '../components/Modal/ProductModal';
-import { EditModal } from '../components/Modal/EditModal';
 import { Product } from '@/types/interfaces';
 import { useRouter } from 'next/navigation';
+import { EditModal } from '../components/Modal/EditModal';
 import { formatEngineOptions } from '@/utils/helper';
+import axios from 'axios';
 
 interface VehicleEntry {
   make: string;
@@ -31,7 +35,6 @@ interface VehicleEntry {
   drive?: string;
   note?: string;
   locked?: boolean;
-
   products?: Product[];
 }
 
@@ -42,18 +45,15 @@ export default function SearchTablePage() {
   const [loading, setLoading] = useState(false);
   const [clicked, setClicked] = useState(false);
   const [tableData, setTableData] = useState<VehicleEntry[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [modalLoading, setModalLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editData, setEditData] = useState<{
-    make: string; model: string; years: string, engineOptions?: string;
-    drive?: string,note: string
-  }>({
-    make: '', model: '', years: '', engineOptions: '',
-    drive: '',note: ''
+  const [editData, setEditData] = useState({
+    make: '',
+    model: '',
+    years: '',
+    engineOptions: '',
+    drive: '',
+    note: '',
   });
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [lockedEntries, setLockedEntries] = useState<VehicleEntry[]>([]);
@@ -62,32 +62,34 @@ export default function SearchTablePage() {
   const app = useAppBridge();
   const router = useRouter();
 
-  const normalizeYear = (year: string) => year.replace(/[–—−]/g, '-').replace(/\s+/g, '');
+  const normalizeYear = (year: string) =>
+    year.replace(/[–—−]/g, '-').replace(/\s+/g, '');
 
   const handleEdit = (index: number) => {
-    const entry = tableData[index];
-    setEditIndex(index);
-    setEditData({
-      ...entry,
-      engineOptions: formatEngineOptions(entry.engineOptions),
-        note: entry.note||''
-    });
-    setEditModalOpen(true);
-  };
-  console.log("edited data:",editData)
+  const entry = tableData[index];
+  setEditIndex(index);
+  setEditData({
+    make: entry.make,
+    model: entry.model,
+    years: entry.years,
+    engineOptions: formatEngineOptions(entry.engineOptions) || '',
+    drive: entry.drive || '',
+    note: entry.note || '',
+  });
+  setEditModalOpen(true);
+};
 
-  const handleUpdateEntry = (updated: {
-    make: string;
-    model: string;
-    years: string;
-    engineOptions?: string;
-    drive?: string;
-    note?:string;
-  }) => {
+  const handleUpdateEntry = (updated: {make: string;
+  model: string;
+  years: string;
+  engineOptions?: string;
+  drive?: string;
+  note?: string;}) => {
     if (editIndex === null) return;
     const normalized = {
       ...updated,
       years: normalizeYear(updated.years),
+      engineOptions: formatEngineOptions(updated.engineOptions),
     };
     setTableData((prev) =>
       prev.map((entry, i) => (i === editIndex ? normalized : entry))
@@ -95,9 +97,6 @@ export default function SearchTablePage() {
     setEditModalOpen(false);
     setEditIndex(null);
   };
-
-  // ✅ Updated Function: Cleans engineOptions to show only up to 'L'
- 
 
   const handleClear = () => {
     setInputValue('');
@@ -125,19 +124,25 @@ export default function SearchTablePage() {
       const response = await fetch('/api/search-parts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partNumber: trimmedPart }),
+        body: JSON.stringify({ partNumber: trimmedPart, note: note }),
       });
 
       const result = await response.json();
-      console.log("result data:", JSON.stringify(result))
-      const normalizedData = (result.compatibleVehicles || []).map((entry: VehicleEntry) => ({
-        ...entry,
-        years: normalizeYear(entry.years),
-      }));
+      const normalizedData = (result.compatibleVehicles || []).map(
+        (entry: VehicleEntry) => ({
+          ...entry,
+          years: normalizeYear(entry.years),
+        })
+      );
+
       const mergedData = [...lockedEntries, ...normalizedData].filter(
         (entry, index, self) =>
-          index === self.findIndex(
-            (e) => e.make === entry.make && e.model === entry.model && e.years === entry.years
+          index ===
+          self.findIndex(
+            (e) =>
+              e.make === entry.make &&
+              e.model === entry.model &&
+              e.years === entry.years
           )
       );
 
@@ -151,36 +156,21 @@ export default function SearchTablePage() {
   };
 
   const handleDelete = (index: number) => {
+    if (
+      tableData[index]?.locked &&
+      !confirm('This entry is locked. Unlock before deleting. Proceed?')
+    )
+      return;
+
     if (confirm('Are you sure you want to delete this entry?')) {
       setTableData((prev) => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  const fetchProducts = async () => {
-    const shop = (app as any)?.config?.shop;
-    if (!shop) return;
-
-    setModalLoading(true);
-    try {
-      const res = await axios.post(`/api/getproduct?shop=${shop}`, {
-        query: GET_PRODUCTS_QUERY,
-      });
-      const productEdges = res.data?.data?.products?.edges || [];
-      const productNodes: Product[] = productEdges.map((edge: any) => ({
-        id: edge.node.id,
-        title: edge.node.title,
-      }));
-      setProducts(productNodes);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setModalLoading(false);
     }
   };
 
   const handleSave = async () => {
     const shop = (app as any)?.config?.shop;
     if (!shop) return;
+
     setSaveLoading(true);
 
     const payload = tableData.map((entry) => ({
@@ -220,7 +210,32 @@ export default function SearchTablePage() {
     setLockedEntries(locked);
     setTableData([...locked, ...unlocked]);
   };
-  console.log("table data:", tableData);
+
+  const selectProducts = async () => {
+    try {
+      const initialSelection = selectedProducts.map((product) => ({
+        id: product.id,
+        type: 'product',
+      }));
+
+      const { selection }: any = await window.shopify.resourcePicker({
+        type: 'product',
+        multiple: false,
+        action: 'select',
+        selectionIds: initialSelection,
+      });
+
+      const updated = selection.map((product: any) => ({
+        id: product.id,
+        title: product.title,
+        legacyResourceId: product.legacyResourceId,
+      }));
+
+      setSelectedProducts(updated);
+    } catch (error) {
+      console.error('Error selecting products:', error);
+    }
+  };
 
   return (
     <Page fullWidth title="Search Compatible Vehicle by Part Number">
@@ -254,7 +269,9 @@ export default function SearchTablePage() {
                 <Button onClick={handleSubmit}>Search</Button>
               </div>
               <div style={{ alignSelf: 'flex-start', marginTop: '23px' }}>
-                <Button tone="critical" onClick={handleClear}>Clear</Button>
+                <Button tone="critical" onClick={handleClear}>
+                  Clear
+                </Button>
               </div>
             </InlineStack>
           </Card>
@@ -283,50 +300,66 @@ export default function SearchTablePage() {
                     { title: 'Drive Type' },
                     { title: 'Notes' },
                     { title: 'Actions' },
-
                   ]}
                   selectable={false}
                 >
                   {tableData.map((part, index) => (
-                    <IndexTable.Row id={index.toString()} key={index} position={index}>
+                    <IndexTable.Row
+                      id={index.toString()}
+                      key={index}
+                      position={index}
+                    >
                       <IndexTable.Cell>{part.make}</IndexTable.Cell>
                       <IndexTable.Cell>{part.model}</IndexTable.Cell>
                       <IndexTable.Cell>{part.years}</IndexTable.Cell>
-                      <IndexTable.Cell>{formatEngineOptions(part.engineOptions)}</IndexTable.Cell>
+                      <IndexTable.Cell>
+                        {formatEngineOptions(part.engineOptions)}
+                      </IndexTable.Cell>
                       <IndexTable.Cell>{part.drive || '-'}</IndexTable.Cell>
-                      <div style={{marginLeft:'0px'}}>
-                        <IndexTable.Cell>
-                          {part.note ? (
-                            <Tooltip content={part.note}>
-                              <Icon source={InfoIcon} tone="base" />
-                            </Tooltip>
-                          ) : (
-                            '-'
-                          )}
-                        </IndexTable.Cell>
-                      </div>
-
+                      <IndexTable.Cell>
+                        {part.note ? (
+                          <Tooltip content={part.note}>
+                            <Icon source={InfoIcon} tone="base" />
+                          </Tooltip>
+                        ) : (
+                          '-'
+                        )}
+                      </IndexTable.Cell>
                       <IndexTable.Cell>
                         <InlineStack gap="200">
-                          <Button icon={<Icon source={EditIcon} tone="base" />} onClick={() => handleEdit(index)} size="slim" />
-                          <Button icon={<Icon source={DeleteIcon} tone="critical" />} onClick={() => handleDelete(index)} size="slim" />
-                          <Button icon={<Icon source={part.locked ? MinusIcon : LockIcon} />} onClick={() => toggleLock(index)} size="slim" />
+                          <Button
+                            icon={<Icon source={EditIcon} tone="base" />}
+                            onClick={() => handleEdit(index)}
+                            size="slim"
+                          />
+                          <Button
+                            icon={<Icon source={DeleteIcon} tone="critical" />}
+                            onClick={() => handleDelete(index)}
+                            size="slim"
+                          />
+                          <Button
+                            icon={
+                              <Icon
+                                source={
+                                  part.locked ? MinusIcon : LockIcon
+                                }
+                              />
+                            }
+                            onClick={() => toggleLock(index)}
+                            size="slim"
+                          />
                         </InlineStack>
                       </IndexTable.Cell>
-
                     </IndexTable.Row>
                   ))}
                 </IndexTable>
               </Card>
 
               <div style={{ marginTop: '16px', textAlign: 'left' }}>
-                <Button
-                  onClick={() => {
-                    fetchProducts();
-                    setModalOpen(true);
-                  }}
-                >
-                  {selectedProducts.length > 0 ? 'Replace Product' : 'Add Product'}
+                <Button onClick={selectProducts}>
+                  {selectedProducts.length > 0
+                    ? 'Replace Products'
+                    : 'Add Products'}
                 </Button>
               </div>
 
@@ -335,7 +368,9 @@ export default function SearchTablePage() {
                   <strong>Selected Products:</strong>
                   <ul style={{ marginTop: '4px' }}>
                     {selectedProducts.map((product) => (
-                      <li key={product.id}>{product.title}</li>
+                      <li key={product.legacyResourceId || product.id}>
+                        {product.title}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -343,7 +378,12 @@ export default function SearchTablePage() {
 
               {selectedProducts.length > 0 && (
                 <div style={{ marginTop: '16px', textAlign: 'right' }}>
-                  <Button onClick={handleSave} variant="primary" disabled={saveLoading} loading={saveLoading}>
+                  <Button
+                    onClick={handleSave}
+                    variant="primary"
+                    disabled={saveLoading}
+                    loading={saveLoading}
+                  >
                     {saveLoading ? 'Saving...' : 'Save'}
                   </Button>
                 </div>
@@ -354,35 +394,24 @@ export default function SearchTablePage() {
           {!loading && clicked && tableData.length === 0 && (
             <Card>
               <div style={{ padding: '16px' }}>
-                <Text as="p" tone="subdued">No results found.</Text>
+                <Text as="p" tone="subdued">
+                  No results found.
+                </Text>
               </div>
             </Card>
           )}
         </div>
       </div>
 
-      <ProductModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        products={products}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        singleSelect={true}
-        onAdd={(selected) => {
-          setSelectedProducts(selected);
-          setModalOpen(false);
-        }}
-      />
-
       <EditModal
-        open={editModalOpen}
-        initialData={editData}
-        onClose={() => {
-          setEditModalOpen(false);
-          setEditIndex(null);
-        }}
-        onSave={handleUpdateEntry}
-      />
+  open={editModalOpen}
+  initialData={editData}
+  onClose={() => {
+    setEditModalOpen(false);
+    setEditIndex(null);
+  }}
+  onSave={handleUpdateEntry}
+/>
     </Page>
   );
 }

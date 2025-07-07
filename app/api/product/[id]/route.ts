@@ -16,6 +16,8 @@ export async function GET(
       where: { id }
     });
 
+
+    
     if (!entry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }

@@ -29,6 +29,7 @@ interface EditEntryModalProps {
   }) => void;
 }
 
+
 export function EditModal({
   open,
   initialData,
