@@ -7,12 +7,14 @@
   <div class="ymm-inner-filter">
     <input type="text" id="vin-input" placeholder="Enter VIN" class="vin-input" maxlength="17">
     <button id="vin-search-btn" class="vin-search-button" onclick="searchByVin()">Search by VIN</button>
-    <a href="#" onclick="enableYmmForm()" class="ymm-clear-link">Search manually instead</a>
   </div>
   <div id="vin-error" class="ymm-error-message"></div>
 
+  <!-- VIN Result Display -->
+  <div id="vin-vehicle-info" class="ymm-inner-filter" style="display: none; margin-top: 16px;"></div>
+
   <!-- YMM Search -->
-  <div class="ymm-inner-filter" id="ymm-section" style="display: none; margin-top: 16px;">
+  <div class="ymm-inner-filter" id="ymm-section" style="margin-top: 16px;">
     <div class="field-wrapper">
       <select id="ymm-make" class="ymm-dropdown">
         <option value="">- Make -</option>
@@ -21,15 +23,18 @@
     </div>
 
     <div class="field-wrapper">
-      <select id="ymm-model" class="ymm-dropdown" disabled>
+      <select id="ymm-model" class="ymm-dropdown">
         <option value="">- Model -</option>
       </select>
       <div id="model-error" class="ymm-error-message"></div>
     </div>
 
     <div class="field-wrapper">
-      <select id="ymm-year" class="ymm-dropdown" disabled>
+      <select id="ymm-year" class="ymm-dropdown">
         <option value="">- Year -</option>
+        {% for i in (2000..2025) %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
       </select>
       <div id="year-error" class="ymm-error-message"></div>
     </div>
@@ -41,14 +46,13 @@
         id="ymm-engine"
         class="ymm-dropdown"
         placeholder="Enter Engine Type (e.g. 2.5L,3.5L)"
-        disabled
       />
       <div id="engine-error" class="ymm-error-message"></div>
     </div>
 
     <!-- Drive Type Field -->
     <div class="field-wrapper">
-      <select id="ymm-drive" class="ymm-dropdown" disabled>
+      <select id="ymm-drive" class="ymm-dropdown">
         <option value="">- Drive Type -</option>
         <option value="AWD">AWD</option>
         <option value="FWD">FWD</option>
@@ -58,16 +62,14 @@
     </div>
 
     <button id="ymm-search-btn" class="ymm-search-button" onclick="handleSearch()">Search</button>
-    <a href="#" class="ymm-clear-link" onclick="clearFilters()">Clear filters</a>
   </div>
 </div>
 
 <script>
   const APP_BASE_url = "https://epartsmaster-app.vercel.app";
-  let ymmData = {};
 
   function clearAllErrors() {
-    ['vin-error', 'make-error', 'model-error', 'year-error', 'drive-error', 'engine-error'].forEach(id => {
+    ['vin-error'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.textContent = '';
@@ -88,13 +90,7 @@
     const button = document.getElementById(buttonId);
     if (!button) return;
     button.disabled = loading;
-    button.textContent = loading
-      ? 'Searching...'
-      : (buttonId === 'vin-search-btn' ? 'Search by VIN' : 'Search');
-  }
-
-  function enableYmmForm() {
-    document.getElementById('ymm-section').style.display = 'flex';
+    button.textContent = loading ? 'Searching...' : 'Search';
   }
 
   async function checkProductTagExists(tag) {
@@ -108,8 +104,8 @@
       return false;
     }
   }
-
-  document.addEventListener("DOMContentLoaded", async () => {
+  
+    document.addEventListener("DOMContentLoaded", async () => {
     const makeSelect = document.getElementById("ymm-make");
     const modelSelect = document.getElementById("ymm-model");
     const yearSelect = document.getElementById("ymm-year");
@@ -161,12 +157,12 @@
     document.getElementById("vin-input").addEventListener("input", clearAllErrors);
   });
 
+
   window.searchByVin = async function () {
     clearAllErrors();
     setLoading('vin-search-btn', true);
 
     const vin = document.getElementById("vin-input").value.trim().toUpperCase();
-    const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
     if (!vin || vin.length !== 17) {
       showError("vin-error", "Please enter a valid 17-character VIN.");
@@ -175,21 +171,19 @@
     }
 
     try {
-      const response = await fetch(`${APP_BASE_url}/api/search-by-vin?vin=${vin}`);
-      const { gptSummary } = await response.json();
+      const response = await fetch(`${APP_BASE_url}/api/decode-vin?vin=${vin}`);
+      const { vehicle: gptSummary } = await response.json();
 
-      const make = gptSummary.make?.toLowerCase().replace(/\s+/g, "-") || "";
-      const model = gptSummary.model?.toLowerCase().replace(/\s+/g, "-") || "";
-      const year = gptSummary["year"]?.toString() || "";
-      const driveType = gptSummary.driveType?.toLowerCase().replace(/\s+/g, "-") || "";
+      const make = gptSummary.make || "";
+      const model = gptSummary.model || "";
+      const year = gptSummary.year || "";
+      const driveType = gptSummary.driveType || "";
       let engineType = gptSummary.engine?.trim() || "";
 
       if (engineType.toUpperCase().includes("L")) {
-  let match = engineType.toUpperCase().match(/[^ ]*L/);
-  if (match) engineType = match[0].toLowerCase();
-} else {
-  engineType = engineType.toLowerCase().replace(/\s+/g, "-");
-}
+        let match = engineType.toUpperCase().match(/[^ ]*L/);
+        if (match) engineType = match[0];
+      }
 
       if (!make || !model || !year) {
         showError("vin-error", "Invalid vehicle data from VIN.");
@@ -197,21 +191,29 @@
         return;
       }
 
-      let tag = `${make}-${model}`;
-      if (driveType) tag += `-${driveType}`;
-      tag += `-${year}`;
-      if (engineType){
-        const safeEngine = engineType.replace(/\./g, 'o'); // replace all `.` with `o`
-        tag += `-${safeEngine}`;
-      } 
+      // Display vehicle info
+      const infoDiv = document.getElementById("vin-vehicle-info");
+    infoDiv.innerHTML = `
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px;">
+    <div><strong>Make:</strong>${make}</div>
+    <div><strong>Model:</strong>${model}</div>
+    <div><strong>Year:</strong>${year}</div>
+    <div><strong>DriveType:</strong>${driveType}</div>
 
-      const exists = await checkProductTagExists(tag);
+    <div><strong>EngineType:</strong>${engineType}</div>
+    <div><strong>Frame/VIN:</strong>${vin}</div>
+  </div>
+`;
 
-      if (exists) {
-        window.location.href = `/collections/${defaultCollection}/${tag}`;
-      } else {
-        showError("vin-error", "No products found for this vehicle.");
-      }
+      infoDiv.style.display = 'block';
+
+      // Pre-fill YMM inputs
+      document.getElementById('ymm-make').innerHTML = `<option value="${make}">${make}</option>`;
+      document.getElementById('ymm-model').innerHTML = `<option value="${model}">${model}</option>`;
+      document.getElementById('ymm-year').value = year;
+      document.getElementById('ymm-engine').value = engineType;
+      document.getElementById('ymm-drive').value = driveType;
+
     } catch (err) {
       console.error("VIN lookup failed:", err);
       showError("vin-error", "Error fetching data for VIN. Please try again.");
@@ -219,7 +221,6 @@
 
     setLoading('vin-search-btn', false);
   };
-
   window.handleSearch = async function () {
     clearAllErrors();
     setLoading('ymm-search-btn', true);
@@ -262,8 +263,7 @@
 
     setLoading('ymm-search-btn', false);
   };
-
-  window.clearFilters = function () {
+   window.clearFilters = function () {
     clearAllErrors();
     document.getElementById('ymm-make').selectedIndex = 0;
     document.getElementById('ymm-model').innerHTML = '<option value="">- Model -</option>';

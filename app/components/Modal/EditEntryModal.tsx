@@ -66,7 +66,7 @@ export default function EditEntryModal({
             label="Vehicle Type"
             options={driveTypeOptions}
             value={driveType}
-            onChange={(selected) => setdriveType(selected as 'AWD' | 'FWD' | 'RWD')}
+            onChange={(selected) => setdriveType(selected as 'AWD' | 'FWD' | 'RWD' | '4WD')}
             error={validationErrors.driveType}
           />
           <TextField

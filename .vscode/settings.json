@@ -1,5 +1,8 @@
 {
   "eslint.workingDirectories": [
     "./web",
+  ],
+  "cSpell.words": [
+    "deduped"
   ]
 }

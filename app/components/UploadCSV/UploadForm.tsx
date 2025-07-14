@@ -75,6 +75,7 @@ export function UploadForm({
           active: result.csvFile.active || false,
           isProcessed: result.csvFile.isProcessed || false,
           totalRecords: result.csvFile.totalRecords || "N/A",
+           processedRecords: result.csvFile.processedRecords
         };
         setUploadedFiles((prev) =>
           Array.isArray(prev) ? [newEntry, ...prev] : [newEntry],

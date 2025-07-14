@@ -1,19 +1,22 @@
 'use client';
+import { ConfirmModal } from '@/app/components/ConfirmBox';
 import { CarEntry } from '@/types/interfaces';
 import { LIMIT } from '@/utils/config/constant';
+import { useAppBridge } from '@shopify/app-bridge-react';
 import {
   Page,
   IndexTable,
   Spinner,
   BlockStack,
   Text,
-  Select,
   InlineStack,
   Pagination,
+  Button,
+  Tooltip,
 } from '@shopify/polaris';
+import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
 
 export default function ProductCarsPage() {
   const { id } = useParams();
@@ -23,26 +26,29 @@ export default function ProductCarsPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount,setTotalCount]=useState()
-  const router = useRouter()
-  useEffect(() => {
-    const fetchCars = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/product/${id}/cars?page=${currentPage}&pageSize=${LIMIT}`);
-        if (!res.ok) throw new Error('Failed to fetch product cars');
-        const data = await res.json();
-        setEntries(data.entries || []);
-        setProductTitle(data.productTitle || null);
-        setTotalCount(data.totalCount);
-        setTotalPages(Math.ceil(data.totalCount / LIMIT));
-      } catch (error) {
-        console.error('Error fetching cars:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [totalCount, setTotalCount] = useState<number>();
+  const router = useRouter();
+  const app = useAppBridge();
 
+  // ✅ Moved fetchCars outside useEffect for reuse
+  const fetchCars = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/product/${id}/cars?page=${currentPage}&pageSize=${LIMIT}`);
+      if (!res.ok) throw new Error('Failed to fetch product cars');
+      const data = await res.json();
+      setEntries(data.entries || []);
+      setProductTitle(data.productTitle || null);
+      setTotalCount(data.totalCount);
+      setTotalPages(Math.ceil(data.totalCount / LIMIT));
+    } catch (error) {
+      console.error('Error fetching cars:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (id) fetchCars();
   }, [id, currentPage]);
 
@@ -53,34 +59,50 @@ export default function ProductCarsPage() {
     return normalize(entry.driveType || '') === normalize(filterType);
   });
 
-  return (
-    <Page fullWidth title={productTitle || 'Product Cars'}
-      backAction={{ content: 'Back', onAction: () => router.push('/database') }}
+  const handleDelete = async (entryId: string) => {
+    const shop = (app as any)?.config?.shop;
 
+    try {
+      const res = await fetch(`/api/product/${entryId}?legacyResourceId=${id}&shop=${shop}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        await fetchCars(); // ✅ Re-fetch table data after delete
+      } else {
+        console.error('Failed to delete product from entry');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleEdit = (entry: CarEntry) => {
+    router.push(`/database/${entry.id}/edit`);
+  };
+
+  return (
+    <Page
+      fullWidth
+      title={productTitle || 'Product Cars'}
+      backAction={{ content: 'Back', onAction: () => router.push('/database') }}
     >
       <BlockStack gap="400">
-        {/* <InlineStack align="start">
-          <div style={{ maxWidth: 250 }}>
-            <Select
-              label="Filter by Vehicle Type"
-              labelHidden
-              options={[
-                { label: 'All', value: 'ALL' },
-                { label: '2 Wheeler', value: '2 Wheeler' },
-                { label: '4 Wheeler', value: '4 Wheeler' },
-              ]}
-              onChange={(val) => setFilterType(val)}
-              value={filterType}
-            />
-          </div>
-        </InlineStack> */}
+        <InlineStack align="end">
+          <Button
+            variant="primary"
+            onClick={() => router.push(`/database/addymmbyproduct?legacyId=${id}`)}
+          >
+            Add YMM Entry
+          </Button>
+        </InlineStack>
 
         {loading ? (
           <BlockStack align="center" inlineAlign="center" gap="400">
             <Spinner accessibilityLabel="Loading cars" size="large" />
           </BlockStack>
         ) : filteredEntries.length === 0 ? (
-          <Text as='p'>No matching vehicles found for this product.</Text>
+          <Text as="p">No matching vehicles found for this product.</Text>
         ) : (
           <>
             <IndexTable
@@ -90,7 +112,9 @@ export default function ProductCarsPage() {
                 { title: 'Year' },
                 { title: 'Make' },
                 { title: 'Model' },
-                { title: 'Vehicle_Type' }
+                { title: 'Drive_Type' },
+                { title: 'Engine_Type' },
+                { title: 'Actions' }
               ]}
               selectable={false}
             >
@@ -104,11 +128,45 @@ export default function ProductCarsPage() {
                       ? entry.driveType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
                       : '-'}
                   </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {entry.engineType || '-'}
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <InlineStack gap="200">
+                      <Tooltip content="Edit this YMM entry">
+                        <Button size='slim' icon={EditIcon} onClick={() => handleEdit(entry)} />
+
+                      </Tooltip>
+                      {/* <Button
+                        icon={DeleteIcon}
+                        tone="critical"
+                        onClick={() => handleDelete(entry.id)}
+                      /> */}
+                      <ConfirmModal
+                        modalTitle="Delete this file?"
+                        message="Are you sure you want to permanently delete this file?"
+                        destructive
+                        onConfirm={() => handleDelete(entry.id)}
+                      >
+                        <Tooltip content="Delete this YMM entry">
+                          <Button
+
+                            size="slim"
+                            tone="critical"
+                            variant="tertiary"
+                            icon={DeleteIcon}
+                          />
+                        </Tooltip>
+
+                      </ConfirmModal>
+                    </InlineStack>
+                  </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
             </IndexTable>
+
             {totalPages > 1 && (
-              <InlineStack align="center" blockAlign="center" >
+              <InlineStack align="center" blockAlign="center">
                 <Pagination
                   hasPrevious={currentPage > 1}
                   onPrevious={() => setCurrentPage((p) => Math.max(p - 1, 1))}
@@ -117,10 +175,10 @@ export default function ProductCarsPage() {
                 />
               </InlineStack>
             )}
+
             <div style={{ marginTop: '12px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
               Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> | Showing <strong>{entries.length}</strong> of <strong>{totalCount}</strong> total entries
             </div>
-
           </>
         )}
       </BlockStack>

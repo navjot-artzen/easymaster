@@ -59,10 +59,13 @@ model ProductYmm {
   make          String
   model         String
   year          String
+  csvFileId     String   
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  csvFile       CsvFile  @relation(fields: [csvFileId], references: [id], name: "CsvFileToProducts", onDelete: Cascade)
 
-  @@unique([handle, compatibility, make, model, year])
+  @@unique([handle, compatibility, make, model, year,csvFileId])
 }
 
 type Product {
@@ -128,4 +131,7 @@ model CsvFile {
   active           Boolean  @default(false)
   isProcessed      Boolean  @default(false)
   createdAt        DateTime @default(now())
+
+  products         ProductYmm[] @relation("CsvFileToProducts")
+
 }

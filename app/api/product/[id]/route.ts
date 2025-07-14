@@ -183,3 +183,144 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Failed to update entry.', error: error.message }, { status: 500 });
   }
 }
+
+
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = params.id;
+    const { searchParams } = new URL(req.url);
+    const legacyResourceId = searchParams.get('legacyResourceId');
+    const shop = searchParams.get('shop');
+
+    if (!legacyResourceId || !shop) {
+      return NextResponse.json(
+        { error: 'Missing legacyResourceId or shop' },
+        { status: 400 }
+      );
+    }
+
+    const session = await findSessionByShop(shop);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const accessToken = session.accessToken;
+
+    // Step 1: Get the existing entry and its product list
+    const entry = await prisma.productsEntry.findUnique({
+      where: { id },
+      select: {
+        products: true,
+        make: true,
+        model: true,
+        startFrom: true,
+        end: true,
+        driveType: true,
+        engineType: true,
+      },
+    });
+    console.log("entry:",entry)
+    if (!entry) {
+      return NextResponse.json(
+        { error: 'ProductsEntry not found' },
+        { status: 404 }
+      );
+    }
+
+    const targetProduct = entry.products.find(
+      (product) => product.legacyResourceId === legacyResourceId
+    );
+
+    if (!targetProduct) {
+      return NextResponse.json(
+        { error: 'Product not associated with this entry' },
+        { status: 404 }
+      );
+    }
+
+    // Step 2: Generate tags from entry data
+    const tagsToRemove = generateMakeModelYearTags(
+      entry.make,
+      entry.model,
+      entry.startFrom,
+      entry.end,
+      entry.driveType ?? '',
+Array.isArray(entry.engineType)
+    ? entry.engineType.join(', ')
+    : typeof entry.engineType === 'string'
+    ? entry.engineType
+    : String(entry.engineType ?? ''))
+
+    console.log("tagsToRemove:",tagsToRemove)
+    // Step 3: Fetch product tags from Shopify
+    const tagQueryRes = await axios.post(
+      `https://${shop}/admin/api/2024-01/graphql.json`,
+      {
+        query: `query { product(id: "${targetProduct.gid}") { id tags } }`,
+      },
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const existingTags: string[] =
+      tagQueryRes.data?.data?.product?.tags || [];
+
+    // Step 4: Filter out the YMM tags to be removed
+    const updatedTags = existingTags.filter(
+      (tag) => !tagsToRemove.includes(tag)
+    );
+
+    // Step 5: Update tags in Shopify only if changed
+    if (updatedTags.length !== existingTags.length) {
+      await axios.post(
+        `https://${shop}/admin/api/2024-01/graphql.json`,
+        {
+          query: PRODUCT_UPDATE_MUTATION,
+          variables: {
+            input: {
+              id: targetProduct.gid,
+              tags: updatedTags,
+            },
+          },
+        },
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    // Step 6: Remove the product from the database entry
+    const updatedProducts = entry.products.filter(
+      (product) => product.legacyResourceId !== legacyResourceId
+    );
+
+    await prisma.productsEntry.update({
+      where: { id },
+      data: { products: updatedProducts },
+    });
+
+    return NextResponse.json({
+      message: 'Product removed and tags cleaned up successfully',
+    });
+  } catch (err: any) {
+    console.error('Delete product error:', err);
+    return NextResponse.json(
+      { error: 'Failed to remove product', details: err.message },
+      { status: 500 }
+    );
+  }
+}
+
+
+

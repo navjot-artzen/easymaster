@@ -58,15 +58,15 @@ export function UploadedFilesTable({
 
               <IndexTable.Cell>
                 {file.processedChunks != null && file.chunkSize != null
-                  ? `${file.processedChunks * file.chunkSize} records`
+                  ? `${file.processedRecords} records`
                   : '0 records'}
               </IndexTable.Cell>
 
               <IndexTable.Cell>{file?.totalRecords}</IndexTable.Cell>
 
               <IndexTable.Cell>
-                <Badge tone={file.active ? 'success' : 'warning'}>
-                  {file.active ? 'Progress' : 'In queue'}
+                <Badge tone={file.active ? 'success' : file.isProcessed ? 'success' : 'warning'}>
+                  {file.active ? 'Progress' :file.isProcessed?'Completed': 'In queue'}
                 </Badge>
               </IndexTable.Cell>
 

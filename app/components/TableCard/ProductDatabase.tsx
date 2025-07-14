@@ -11,6 +11,7 @@ import {
   Tooltip,
   Icon,
   InlineStack,
+  Text,
 } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,8 @@ interface Props {
   totalCount: number;
   entriesCount: number;
   shop: string;
+  limit: number;
+
 }
 
 export function ProductDatabaseTable({
@@ -35,6 +38,8 @@ export function ProductDatabaseTable({
   totalCount,
   entriesCount,
   shop,
+  limit
+
 }: Props) {
   const router = useRouter();
 
@@ -52,6 +57,8 @@ export function ProductDatabaseTable({
               itemCount={flatRows.length}
               selectable={false}
               headings={[
+                { title: 'Sr. No.' },
+
                 { title: 'Product Title' },
                 { title: 'Company' },
                 { title: 'Car Name' },
@@ -69,6 +76,12 @@ export function ProductDatabaseTable({
                   key={`${row.entryId}-${index}`}
                   position={index}
                 >
+                  <IndexTable.Cell>
+              <Text as='dd' variant='headingXs' tone='base'>
+                {(page - 1) * limit + index + 1}
+              </Text>
+            </IndexTable.Cell>
+
                   <IndexTable.Cell>
                     <a
                       href={`https://${shop}/admin/products/${row.legacyResourceId}`}
@@ -102,7 +115,7 @@ export function ProductDatabaseTable({
                       ? row.driveType.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
                       : '-'}
                   </IndexTable.Cell>
-                      <div style={{marginLeft:'0px'}}>
+                  <div style={{ marginLeft: '0px' }}>
                     <IndexTable.Cell>
                       {row.note ? (
                         <Tooltip content={row.note}>
@@ -112,7 +125,7 @@ export function ProductDatabaseTable({
                         '-'
                       )}
                     </IndexTable.Cell>
-                    </div>
+                  </div>
 
                   <IndexTable.Cell>
                     <Button

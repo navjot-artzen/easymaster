@@ -370,35 +370,41 @@ export async function POST(req: NextRequest) {
     if (!partNumber) {
       return NextResponse.json({ error: "partNumber is required" }, { status: 400 });
     }
+const systemMessage = `
+You are a precise automotive parts compatibility assistant. Your ONLY job is to determine what vehicle(s) a part fits, based on the raw text content from webpages provided to you.
 
-    const systemMessage = `
-    You are a precise automotive parts compatibility assistant. Your ONLY job is to determine what vehicle(s) a part fits, based on the raw text content from webpages provided to you.
+1. The system will perform a web search and scrape the content from several pages. You will receive this content as a single block of text.
+2. You MUST analyze the provided text content from all pages. Your task is to extract compatibility information from this text.
+3. Pay special attention to the user's note in the prompt, as it contains important hints that should be prioritized.
+4. From the text, extract and aggregate the following details:
+   - The make and model.
+   - An aggregated year range (e.g., "2011–2016").
+   - A list of specific engine options (e.g., ["2.0L", "2.4L"]).
+   - The drive type. It must be one of: "FWD", "RWD", "AWD", or "unknown".
+   - Only include a "note" field IF there is specific, unique fitment information for that vehicle.
+     - For example: "Fits only 2.5L, not 3.5L", "Uses smaller variant of this part number", etc.
+     - Do NOT include the "note" key at all if there's no such specific info.
+     - Do NOT use generic notes like "Fits this vehicle".
+     - Do NOT repeat the same note for multiple vehicles.
+5. Generate a single JSON array of compatible vehicles in the exact format specified below.
+6. If you cannot find a specific detail from the provided text, use "unknown".
+7. If the provided text is inconclusive or doesn't contain fitment data, return an empty array [].
+8. Your final response to the user must be ONLY the JSON array. Do not include any other text, markdown, or explanations.
 
-    1. The system will perform a web search and scrape the content from several pages. You will receive this content as a single block of text.
-    2. You MUST analyze the provided text content from all pages. Your task is to extract compatibility information from this text.
-    3. Pay special attention to the user's note in the prompt, as it contains important hints that should be prioritized.
-    4. From the text, extract and aggregate the following details:
-      - The make and model.
-      - An aggregated year range (e.g., "2011–2016").
-      - A list of specific engine options (e.g., ["2.0L", "2.4L"]).
-      - The drive type. It must be one of: "FWD", "RWD", "AWD", or "unknown".
-    5. Generate a single JSON array of compatible vehicles in the exact format specified below.
-    6. If you cannot find a specific detail from the provided text, use "unknown".
-    7. If the provided text is inconclusive or doesn't contain fitment data, return an empty array [].
-    8. Your final response to the user must be ONLY the JSON array. Do not include any other text, markdown, or explanations.
+**JSON Output Format:**
+[
+  {
+    "make": "Make",
+    "model": "Model",
+    "years": "A year range like '2011–2016'",
+    "engineOptions": ["List", "of", "common", "engines"],
+    "drive": "FWD"
+    // "note": "Only include if something unique applies"
+  }
+]
+`;
 
-    **JSON Output Format:**
-    [
-      {
-        "make": "Make",
-        "model": "Model",
-        "years": "A year range like '2011–2016'",
-        "engineOptions": ["List", "of", "common", "engines"],
-        "drive": "FWD",
-        "note": "Comment about the source or why this vehicle may fit"
-      }
-    ]
-    `;
+
 
     const userMessage = `Find compatible vehicles for part number: "${partNumber}". ${note ? `Note: ${note}` : ''}`;
 
@@ -470,13 +476,19 @@ export async function POST(req: NextRequest) {
       console.log("Enriching vehicle data with a second AI call...");
 
       const enrichmentSystemMessage = `
-      You are an automotive data specialist. Your task is to enrich a given JSON array of vehicles with 'engineOptions' and 'drive' types.
-      - Use your knowledge of vehicles to fill in the missing data based on the provided make, model, and years.
-      - A user may have provided a hint in the prompt. Prioritize information that aligns with this hint.
-      - The drive type MUST be one of: "FWD", "RWD", "AWD", or "unknown".
-      - The engineOptions should be a list of common engine sizes, like ["2.0L", "3.5L V6"].
-      - Return the complete, updated JSON array only. Do not add any text, explanations, or markdown.
-      `;
+You are an automotive data specialist. Your task is to enrich a given JSON array of vehicles with 'engineOptions' and 'drive' types.
+
+- Use your knowledge of vehicles to fill in the missing data based on the provided make, model, and years.
+- ONLY include a 'note' if a specific vehicle has a unique condition, such as:
+   - The part only fits a specific engine type.
+   - The part is incompatible with a trim or transmission.
+   - The part fits a subset of the vehicle years or versions.
+- NEVER add generic notes like "This part fits this vehicle" or copy the same note for multiple vehicles.
+- The drive type MUST be one of: "FWD", "RWD", "AWD", or "unknown".
+- The engineOptions should be a list of common engine sizes, like ["2.0L", "3.5L V6"].
+- Return the complete, updated JSON array only. Do not add any text, explanations, or markdown.
+`;
+
 
       const enrichmentUserMessage = `Please enrich the following JSON data with specific 'engineOptions' and 'drive' types for each vehicle. Return the full, updated JSON array.\n\n${JSON.stringify(data)}\n\n${note ? `USER HINT: "${note}"` : ''}`;
 

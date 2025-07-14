@@ -34,11 +34,11 @@ export default function VinSearchPage() {
         setLoading(true);
 
         try {
-            const response = await fetch(`/api/search-by-vin?vin=${vin}`);
+            const response = await fetch(`/api/decode-vin?vin=${vin}`);
             if (!response.ok) throw new Error(`API error: ${response.status}`);
             const result = await response.json();
-            setVehicleDatabyGpt(result.gptSummary || null)
-            setVehicleData(result.decodedData || null);
+            setVehicleDatabyGpt(result.vehicle || null)
+            setVehicleData(result.sources.nhtsa || null);
         } catch (error) {
             console.error('VIN Search Error:', error);
             setVehicleData(null);

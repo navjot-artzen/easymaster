@@ -8,7 +8,7 @@ embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "navjot-work.myshopify.com"
+dev_store_url = "artzen-demo.myshopify.com"
 include_config_on_deploy = true
 
 [webhooks]

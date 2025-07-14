@@ -1,4 +1,3 @@
-// utils/makeModelEntry.ts
 import prisma from '@/lib/prisma';
 
 export const makeModalEntry = async (make: string, model: string, from: string, to: string) => {
@@ -6,8 +5,10 @@ export const makeModalEntry = async (make: string, model: string, from: string, 
     throw new Error('Make, model, from, and to are required');
   }
 
+  console.log(make, model, from, to,"***************************************")
+
   // Step 1: Check or create Make
-  let existingMake = await prisma.make.findUnique({
+  let existingMake = await prisma.make.findFirst({
     where: { name: make.trim() },
   });
 

@@ -98,7 +98,7 @@ export function EditModal({
         <Select
           label="Drive Type"
           value={driveType}
-          options={[ 'RWD', 'FWD', 'AWD']}
+          options={[ 'RWD', 'FWD', 'AWD', '4WD']}
           onChange={setDriveType}
         />
          <TextField

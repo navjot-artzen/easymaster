@@ -9,11 +9,13 @@ import { ProductEntryInput } from '@/types/interfaces';
 
 export const dynamic = 'force-dynamic';
 
-
-
 function extractLegacyId(gid: string): string {
   const parts = gid.split('/');
   return parts[parts.length - 1];
+}
+
+function normalizeString(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 const GET_PRODUCT_TAGS_QUERY = `
@@ -30,7 +32,6 @@ function yearsOverlap(startA: number, endA: number, startB: number, endB: number
 
 export async function POST(req: NextRequest) {
   try {
-    
     const payload = (await req.json()) as ProductEntryInput[];
     if (!Array.isArray(payload) || payload.length === 0) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -57,13 +58,15 @@ export async function POST(req: NextRequest) {
         !entry.year ||
         !entry.make ||
         !entry.model ||
-        !entry.driveType ||
-        !entry.engineType||
+        !entry.products ||
         !Array.isArray(entry.products) ||
         entry.products.length === 0
       ) {
         return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
       }
+
+      const cleanedMake = normalizeString(entry.make.trim());
+      const cleanedModel = normalizeString(entry.model.trim());
 
       const [startFrom, end] = entry.year.includes('-')
         ? entry.year.split('-')
@@ -76,8 +79,6 @@ export async function POST(req: NextRequest) {
       const existingEntries = await prisma.productsEntry.findMany({
         where: {
           shop,
-          make: entry.make,
-          model: entry.model,
           products: {
             some: {
               legacyResourceId: {
@@ -86,9 +87,14 @@ export async function POST(req: NextRequest) {
             },
           },
         },
+        include: {
+          products: true,
+        },
       });
 
-      const isDuplicate = existingEntries.some((existing) => {
+      const matchedEntries = existingEntries.filter((existing) => {
+        const existingMake = normalizeString(existing.make.trim());
+        const existingModel = normalizeString(existing.model.trim());
         const existingStart = parseInt(existing.startFrom, 10);
         const existingEnd = parseInt(existing.end, 10);
 
@@ -97,31 +103,78 @@ export async function POST(req: NextRequest) {
           productLegacyIds.includes(existingProduct.legacyResourceId)
         );
 
-        return overlaps && sameProducts;
+        return (
+          existingMake === cleanedMake &&
+          existingModel === cleanedModel &&
+          overlaps &&
+          sameProducts
+        );
       });
 
-      if (isDuplicate) {
-        duplicateEntries.push({
-          make: entry.make,
-          model: entry.model,
-          year: entry.year,
-          message: 'This entry already exists for one or more selected products.',
-        });
+      if (matchedEntries.length > 0) {
+        for (const matched of matchedEntries) {
+          const updateData: any = {};
+          if (!matched.engineType && entry.engineType) {
+            updateData.engineType = entry.engineType;
+          }
+          if (!matched.driveType && entry.driveType) {
+            updateData.driveType = entry.driveType;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await prisma.productsEntry.update({
+              where: { id: matched.id },
+              data: updateData,
+            });
+
+            duplicateEntries.push({
+              make: cleanedMake,
+              model: cleanedModel,
+              year: entry.year,
+              message: `Updated entry ID ${matched.id} with missing fields.`,
+            });
+          } else {
+            duplicateEntries.push({
+              make: cleanedMake,
+              model: cleanedModel,
+              year: entry.year,
+              message: `Duplicate entry found (ID ${matched.id}), no updates needed.`,
+            });
+          }
+        }
+
+        // ✅ Always add tags for matched (existing) entries too
+        const ymmTags = generateMakeModelYearTags(
+          cleanedMake,
+          cleanedModel,
+          startFrom,
+          end,
+          entry.driveType,
+          entry.engineType
+        );
+
+        for (const product of entry.products) {
+          const existingTags = productTagsMap.get(product.productId) || new Set<string>();
+          ymmTags.forEach((tag) => existingTags.add(tag));
+          productTagsMap.set(product.productId, existingTags);
+        }
+
         continue;
       }
 
-      await makeModalEntry(entry.make, entry.model, startFrom, end);
+      // New entry case
+      await makeModalEntry(cleanedMake, cleanedModel, startFrom, end);
 
       await prisma.productsEntry.create({
         data: {
           startFrom,
           end,
           shop,
-          make: entry.make,
-          model: entry.model,
+          make: cleanedMake,
+          model: cleanedModel,
           driveType: entry.driveType,
-          engineType:entry.engineType,
-          note:entry.note,
+          engineType: entry.engineType,
+          note: entry.note,
           products: entry.products.map((p) => ({
             title: p.title,
             gid: p.productId,
@@ -132,7 +185,16 @@ export async function POST(req: NextRequest) {
 
       createdCount++;
 
-      const ymmTags = generateMakeModelYearTags(entry.make, entry.model, startFrom, end,entry.driveType,entry.engineType);
+      // ✅ Also collect tags for new entries
+      const ymmTags = generateMakeModelYearTags(
+        cleanedMake,
+        cleanedModel,
+        startFrom,
+        end,
+        entry.driveType,
+        entry.engineType
+      );
+
       for (const product of entry.products) {
         const existingTags = productTagsMap.get(product.productId) || new Set<string>();
         ymmTags.forEach((tag) => existingTags.add(tag));
@@ -140,6 +202,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ✅ Apply tags to Shopify products (whether new or existing entries)
     for (const [productId, tagsSet] of productTagsMap.entries()) {
       const existingRes = await axios.post(
         `https://${shop}/admin/api/2024-01/graphql.json`,
@@ -189,7 +252,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: `${createdCount} entries saved.`,
       createdCount,
-      duplicateEntries, // ✅ Return all skipped duplicates
+      duplicateEntries,
       mutations: mutationResponses,
     });
   } catch (error: any) {
@@ -200,4 +263,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

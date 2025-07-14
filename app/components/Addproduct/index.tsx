@@ -23,7 +23,7 @@ export default function ProductTargetSelector() {
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [note, setNote] = useState('');
-  const [driveType, setdriveType] = useState<'AWD' | 'FWD' | 'RWD'>('AWD');
+  const [driveType, setdriveType] = useState<'AWD' | 'FWD' | 'RWD' | '4WD'>('AWD');
   const [isSaving, setIsSaving] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +48,8 @@ export default function ProductTargetSelector() {
     { label: 'AWD', value: 'AWD' },
     { label: 'FWD', value: 'FWD' },
     { label: 'RWD', value: 'RWD' },
+    { label: '4WD', value: '4WD' },
+
   ];
 
   const validateFields = (): boolean => {
@@ -67,7 +69,7 @@ export default function ProductTargetSelector() {
 
     if (!make.trim()) errors.make = 'Enter make';
     if (!model.trim()) errors.model = 'Enter model';
-    if (!driveType) errors.driveType = 'Select vehicle type';
+    if (!driveType) errors.driveType = 'Select drive type';
     if (!engineType.trim()) errors.engineType = 'Enter engine type';
 
     setValidationErrors(errors);
@@ -108,7 +110,7 @@ export default function ProductTargetSelector() {
     setYear(`${item.from}-${item.to}`);
     setMake(item.make);
     setModel(item.model);
-    setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD');
+    setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD' |'4WD');
     setEngineType(item.engineType);
     setNote(item.note);
     setEditIndex(index);
@@ -213,7 +215,7 @@ export default function ProductTargetSelector() {
       title="Product Target Selector"
       backAction={{ content: 'Back', onAction: () => router.push('/database') }}
     >
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{  margin: '0 auto' }}>
         <BlockStack gap="400">
           <SelectedProductsCard
             selectedItems={selectedItems}

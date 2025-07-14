@@ -107,7 +107,6 @@ export async function GET(req: NextRequest) {
   const files = await prisma.csvFile.findMany({
     where: { shop },
     orderBy: { createdAt: 'asc' },
-
   });
 
   if (!files || files.length === 0) {
@@ -134,6 +133,7 @@ export async function GET(req: NextRequest) {
         active: file.active,
         isProcessed: file.isProcessed,
         totalRecords: file.totalRecords,
+        processedRecords: file.processedRecords,
         chunkSize,
         totalChunks,
         processedChunks,

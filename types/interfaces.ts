@@ -50,8 +50,14 @@ export interface CarEntry {
   make: string;
   model: string;
   driveType?: string;
+  engineType?:string;
   createdAt: string;
   updatedAt: string;
+  products:{
+     gid: string;
+    title: string;
+    legacyResourceId: string;
+  }[]
 }
 
 export interface ProductModalProps {
@@ -85,7 +91,7 @@ export interface EditEntryModalProps {
   setYear: (value: string) => void;
   setMake: (value: string) => void;
   setModel: (value: string) => void;
-  setdriveType: (value: 'AWD' | 'FWD' | 'RWD') => void;
+  setdriveType: (value: 'AWD' | 'FWD' | 'RWD' | '4WD') => void;
   setEngineType:(val: string) => void;
   setNote:(value: string) => void;
   onUpdate: () => void;
@@ -101,6 +107,7 @@ export interface SelectedProductsCardProps {
 
 
 export interface UploadedFile {
+  processedRecords: any;
   id: string;
   error?: string | null;
   fileName: string;
@@ -150,7 +157,7 @@ export interface EntryProps {
   onChangeYear: (type: 'from' | 'to', value: string) => void;
   onChangeMake: (value: string) => void;
   onChangeModel: (value: string) => void;
-  onChangedriveType: (value: 'AWD' | 'FWD' | 'RWD') => void;
+  onChangedriveType: (value: 'AWD' | 'FWD' | 'RWD'| '4WD') => void;
   onChangeEngineType:(value:string)=>void
   onChangeNote:(value:string)=>void
   onAddEntry: () => void;

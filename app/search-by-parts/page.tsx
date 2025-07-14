@@ -66,25 +66,27 @@ export default function SearchTablePage() {
     year.replace(/[–—−]/g, '-').replace(/\s+/g, '');
 
   const handleEdit = (index: number) => {
-  const entry = tableData[index];
-  setEditIndex(index);
-  setEditData({
-    make: entry.make,
-    model: entry.model,
-    years: entry.years,
-    engineOptions: formatEngineOptions(entry.engineOptions) || '',
-    drive: entry.drive || '',
-    note: entry.note || '',
-  });
-  setEditModalOpen(true);
-};
+    const entry = tableData[index];
+    setEditIndex(index);
+    setEditData({
+      make: entry.make,
+      model: entry.model,
+      years: entry.years,
+      engineOptions: formatEngineOptions(entry.engineOptions) || '',
+      drive: entry.drive || '',
+      note: entry.note || '',
+    });
+    setEditModalOpen(true);
+  };
 
-  const handleUpdateEntry = (updated: {make: string;
-  model: string;
-  years: string;
-  engineOptions?: string;
-  drive?: string;
-  note?: string;}) => {
+  const handleUpdateEntry = (updated: {
+    make: string;
+    model: string;
+    years: string;
+    engineOptions?: string;
+    drive?: string;
+    note?: string;
+  }) => {
     if (editIndex === null) return;
     const normalized = {
       ...updated,
@@ -220,7 +222,7 @@ export default function SearchTablePage() {
 
       const { selection }: any = await window.shopify.resourcePicker({
         type: 'product',
-        multiple: false,
+        multiple: true,
         action: 'select',
         selectionIds: initialSelection,
       });
@@ -316,40 +318,46 @@ export default function SearchTablePage() {
                         {formatEngineOptions(part.engineOptions)}
                       </IndexTable.Cell>
                       <IndexTable.Cell>{part.drive || '-'}</IndexTable.Cell>
-                      <IndexTable.Cell>
-                        {part.note ? (
-                          <Tooltip content={part.note}>
-                            <Icon source={InfoIcon} tone="base" />
-                          </Tooltip>
-                        ) : (
-                          '-'
-                        )}
-                      </IndexTable.Cell>
+                      <div style={{ marginLeft: '0px' }}>
+                        <IndexTable.Cell>
+                          {part.note ? (
+                            <Tooltip content={part.note}>
+                              <Icon source={InfoIcon} tone="base" />
+                            </Tooltip>
+                          ) : (
+                            '-'
+                          )}
+                        </IndexTable.Cell>
+                      </div>
+
                       <IndexTable.Cell>
                         <InlineStack gap="200">
-                          <Button
-                            icon={<Icon source={EditIcon} tone="base" />}
-                            onClick={() => handleEdit(index)}
-                            size="slim"
-                          />
-                          <Button
-                            icon={<Icon source={DeleteIcon} tone="critical" />}
-                            onClick={() => handleDelete(index)}
-                            size="slim"
-                          />
-                          <Button
-                            icon={
-                              <Icon
-                                source={
-                                  part.locked ? MinusIcon : LockIcon
-                                }
-                              />
-                            }
-                            onClick={() => toggleLock(index)}
-                            size="slim"
-                          />
+                          <Tooltip content="Edit this vehicle entry">
+                            <Button
+                              icon={<Icon source={EditIcon} tone="base" />}
+                              onClick={() => handleEdit(index)}
+                              size="slim"
+                            />
+                          </Tooltip>
+
+                          <Tooltip content="Delete this entry">
+                            <Button
+                              icon={<Icon source={DeleteIcon} tone="critical" />}
+                              onClick={() => handleDelete(index)}
+                              size="slim"
+                            />
+                          </Tooltip>
+
+                          <Tooltip content={part.locked ? "Unlock this row" : "Lock this row"}>
+                            <Button
+                              icon={<Icon source={part.locked ? MinusIcon : LockIcon} />}
+                              onClick={() => toggleLock(index)}
+                              size="slim"
+                            />
+                          </Tooltip>
                         </InlineStack>
                       </IndexTable.Cell>
+
                     </IndexTable.Row>
                   ))}
                 </IndexTable>
@@ -358,7 +366,7 @@ export default function SearchTablePage() {
               <div style={{ marginTop: '16px', textAlign: 'left' }}>
                 <Button onClick={selectProducts}>
                   {selectedProducts.length > 0
-                    ? 'Replace Products'
+                    ? 'Add more Products'
                     : 'Add Products'}
                 </Button>
               </div>
@@ -404,14 +412,14 @@ export default function SearchTablePage() {
       </div>
 
       <EditModal
-  open={editModalOpen}
-  initialData={editData}
-  onClose={() => {
-    setEditModalOpen(false);
-    setEditIndex(null);
-  }}
-  onSave={handleUpdateEntry}
-/>
+        open={editModalOpen}
+        initialData={editData}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditIndex(null);
+        }}
+        onSave={handleUpdateEntry}
+      />
     </Page>
   );
 }

@@ -28,6 +28,7 @@ export default function UploadCsvPage() {
       const data = await res.json();
       console.log(data, "/database/upload-csv");
       setUploadedFiles(data);
+      console.log("csv data:",data)
       setHasFiles(data.length > 0);
     }
     setLoading(false);
