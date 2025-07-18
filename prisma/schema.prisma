@@ -100,7 +100,7 @@ model Make {
 
 model Model {
   id     String      @id @default(auto()) @map("_id") @db.ObjectId
-  name   String      @unique
+  name   String      
   makeId String
   make   Make        @relation(fields: [makeId], references: [id])
   years  YearEntry[]

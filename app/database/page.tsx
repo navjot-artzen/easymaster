@@ -29,9 +29,15 @@ export default function SearchEntryListPage() {
   const [shop, setShop] = useState<string | undefined>();
   const [limit, setLimit] = useState('25');
 
+  const [makesData, setMakesData] = useState<any[]>([]);
+  const [selectedMake, setSelectedMake] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [modelsForMake, setModelsForMake] = useState<any[]>([]);
+
   const router = useRouter();
   const app = useAppBridge();
 
+  // Fetch entries based on filters
   useEffect(() => {
     const shop = app?.config?.shop;
     setShop(shop);
@@ -40,7 +46,15 @@ export default function SearchEntryListPage() {
     const fetchEntries = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/product?shop=${shop}&page=${page}&limit=${limit}`);
+        const params = new URLSearchParams({
+          shop,
+          page: page.toString(),
+          limit,
+        });
+        if (selectedMake) params.append('make', selectedMake);
+        if (selectedModel) params.append('model', selectedModel);
+
+        const res = await fetch(`/api/product?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch entries');
         const { entries, totalCount } = await res.json();
         setEntries(entries);
@@ -53,14 +67,42 @@ export default function SearchEntryListPage() {
     };
 
     fetchEntries();
-  }, [app, page, limit]);
+  }, [app, page, limit, selectedMake, selectedModel]);
+
+  // Fetch Make-Model list
+  useEffect(() => {
+    const fetchMakeModel = async () => {
+      try {
+        const res = await fetch('/api/make-model');
+        const data = await res.json();
+        if (data?.makes) {
+          setMakesData(data.makes);
+        }
+      } catch (err) {
+        console.error('Error fetching makes/models', err);
+      }
+    };
+    fetchMakeModel();
+  }, []);
 
   const handleLimitChange = (value: string) => {
     setLimit(value);
-    setPage(1); // reset to page 1 when limit changes
+    setPage(1);
   };
 
-  const flatRows = entries || [];
+  const handleMakeChange = (makeName: string) => {
+    setSelectedMake(makeName);
+    setSelectedModel('');
+    setPage(1); // Reset page on filter
+    const selected = makesData.find((m) => m.name === makeName);
+    setModelsForMake(selected?.models || []);
+  };
+
+  const handleModelChange = (modelName: string) => {
+    setSelectedModel(modelName);
+    setPage(1); // Reset page on filter
+  };
+
   const totalPages = Math.ceil(totalCount / Number(limit));
   if (!shop) return null;
 
@@ -70,6 +112,7 @@ export default function SearchEntryListPage() {
       title="Search entries & results"
       primaryAction={
         <InlineStack align="end" gap="400">
+          {/* Pagination limit */}
           <Select
             label="Show"
             labelInline
@@ -77,6 +120,25 @@ export default function SearchEntryListPage() {
             value={limit}
             onChange={handleLimitChange}
           />
+
+          {/* Make Filter */}
+          <Select
+            label=""
+            labelInline
+            options={[{ label: 'All Makes', value: '' }, ...makesData.map((m) => ({ label: m.name, value: m.name }))]}
+            value={selectedMake}
+            onChange={handleMakeChange}
+          />
+
+          {/* Model Filter */}
+          <Select
+            label=""
+            labelInline
+            options={[{ label: 'All Models', value: '' }, ...modelsForMake.map((m) => ({ label: m.name, value: m.name }))]}
+            value={selectedModel}
+            onChange={handleModelChange}
+          />
+
           <Button onClick={() => router.push('/database/upload-csv')}>Upload CSV</Button>
           <Button onClick={() => router.push('/database/create')} variant="primary">
             Add search entry
@@ -86,16 +148,15 @@ export default function SearchEntryListPage() {
     >
       <ProductDatabaseTable
         loading={loading}
-        flatRows={flatRows}
+        flatRows={entries}
         totalPages={totalPages}
         page={page}
         setPage={setPage}
         totalCount={totalCount}
         entriesCount={entries.length}
         shop={shop}
-        limit={Number(limit)} // pass this
+        limit={Number(limit)}
       />
-
     </Page>
   );
 }

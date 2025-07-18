@@ -11,23 +11,36 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  console.log("inside api")
+  console.log("inside api");
   const formData = await req.formData();
 
   const file = formData.get('file') as File;
   const shop = formData.get('shop') as string | null;
-  const text = await file.text();
 
   if (!file || file.type !== 'text/csv') {
     return NextResponse.json({ message: 'Only CSV files are allowed.' }, { status: 400 });
   }
-  
-  const records = parse(text, { columns: true, skip_empty_lines: true });
-  const rawRows = parse(text, { columns: false, skip_empty_lines: true });
+
+  const text = await file.text();
+
+  // ✅ Clean trailing commas from each line
+  const cleanedText = text
+    .split('\n')
+    .map(line => line.replace(/,(?=\s*$)/, ''))
+    .join('\n');
+
+  // ✅ Parse CSV after cleaning
+  let records: any[] = [];
+  let rawRows: any[][] = [];
+  try {
+    records = parse(cleanedText, { columns: true, skip_empty_lines: true });
+    rawRows = parse(cleanedText, { columns: false, skip_empty_lines: true });
+  } catch (error) {
+    return NextResponse.json({ message: 'Error parsing CSV.', error }, { status: 400 });
+  }
+
   const csvHeader = rawRows[0];
-
   const requiredHeaders = ['Brand', 'Model', 'Year', 'Engine Type', 'Part'];
-
   const missingHeaders = requiredHeaders.filter(
     (header) => !csvHeader.includes(header)
   );
@@ -41,15 +54,12 @@ export async function POST(req: NextRequest) {
 
   const totalRecords = records.length;
 
-  if (!file || file.type !== 'text/csv') {
-    return NextResponse.json({ message: 'Only CSV files are allowed.' }, { status: 400 });
-  }
-
   if (!shop) {
     return NextResponse.json({ message: 'Missing shop information.' }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  // ✅ Upload cleaned CSV instead of original file
+  const buffer = Buffer.from(cleanedText, 'utf-8');
   const fileName = `csv/${Date.now()}-${file.name}`;
   const bucketName = process.env.SUPABASE_STORAGE;
 
@@ -79,7 +89,6 @@ export async function POST(req: NextRequest) {
 
   const isFirstFile = !activeFile;
 
-
   const createdFile = await prisma.csvFile.create({
     data: {
       name: file.name,
@@ -95,6 +104,55 @@ export async function POST(req: NextRequest) {
     csvFile: createdFile
   });
 }
+
+// export async function GET(req: NextRequest) {
+//   const { searchParams } = new URL(req.url);
+//   const shop = searchParams.get('shop');
+
+//   if (!shop) {
+//     return NextResponse.json({ message: 'Missing shop parameter.' }, { status: 400 });
+//   }
+
+//   const files = await prisma.csvFile.findMany({
+//     where: { shop },
+//     orderBy: { createdAt: 'asc' },
+//   });
+
+//   if (!files || files.length === 0) {
+//     return NextResponse.json({ message: 'No files found for this shop.' }, { status: 404 });
+//   }
+
+//   const enrichedFiles = await Promise.all(
+//     files.map(async (file) => {
+//       let totalChunks = 0;
+//       const redisKey = `csv_chunk_index_${file.id}`;
+//       const processedChunks = (await redis.get<number>(redisKey)) ?? 0;
+
+//       try {
+//         const { totalRecords } = file;
+//         totalChunks = Math.ceil(totalRecords / chunkSize);
+//       } catch (error) {
+//         console.error(`Failed to load or parse CSV from ${file.url}:`, error);
+//       }
+
+//       return {
+//         id: file.id,
+//         fileName: file.name,
+//         url: file.url,
+//         active: file.active,
+//         isProcessed: file.isProcessed,
+//         totalRecords: file.totalRecords,
+//         processedRecords: file.processedRecords,
+//         chunkSize,
+//         totalChunks,
+//         processedChunks,
+//         error: file.error
+//       };
+//     })
+//   );
+
+//   return NextResponse.json(enrichedFiles);
+// }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

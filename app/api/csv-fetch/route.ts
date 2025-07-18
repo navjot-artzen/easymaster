@@ -169,7 +169,7 @@ async function processChunk(chunk: any[], shop: string, accessToken: string) {
       }));
 
       // Create modal entry if needed
-      await makeModalEntry(record['Brand'], record['Model'], record['Year'], record['Year']);
+      await makeModalEntry(record['Brand'], record['Model'], record['Year'].toString(), record['Year'].toString());
 
       return {
         make: record['Brand'] || null,

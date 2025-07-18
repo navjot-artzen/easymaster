@@ -58,7 +58,6 @@ export function ProductDatabaseTable({
               selectable={false}
               headings={[
                 { title: 'Sr. No.' },
-
                 { title: 'Product Title' },
                 { title: 'Company' },
                 { title: 'Car Name' },

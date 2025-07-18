@@ -1,27 +1,36 @@
 import prisma from '@/lib/prisma';
 
-export const makeModalEntry = async (make: string, model: string, from: string, to: string) => {
+export const makeModalEntry = async (
+  make: string,
+  model: string,
+  from: string,
+  to: string,
+) => {
+
   if (!make || !model || !from || !to) {
     throw new Error('Make, model, from, and to are required');
   }
 
-  console.log(make, model, from, to,"***************************************")
+  console.log(make, model, from, to, "***************************************");
+
+  const trimmedMake = make.trim();
+  const trimmedModel = model.trim();
 
   // Step 1: Check or create Make
   let existingMake = await prisma.make.findFirst({
-    where: { name: make.trim() },
+    where: { name: trimmedMake },
   });
 
   if (!existingMake) {
     existingMake = await prisma.make.create({
-      data: { name: make.trim() },
+      data: { name: trimmedMake },
     });
   }
 
   // Step 2: Check or create Model
   let existingModel = await prisma.model.findFirst({
     where: {
-      name: model.trim(),
+      name: trimmedModel,
       makeId: existingMake.id,
     },
   });
@@ -29,13 +38,13 @@ export const makeModalEntry = async (make: string, model: string, from: string, 
   if (!existingModel) {
     existingModel = await prisma.model.create({
       data: {
-        name: model.trim(),
+        name: trimmedModel,
         makeId: existingMake.id,
       },
     });
   }
 
-  // Step 3: Check or create YearEntry
+  // Step 3: Check or create YearEntry (with trim)
   let existingYearEntry = await prisma.yearEntry.findFirst({
     where: {
       from,

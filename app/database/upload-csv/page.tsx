@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Page } from "@shopify/polaris";
+import {
+  Page,
+  Button,
+  Icon,
+  Tooltip,
+  InlineStack,
+} from "@shopify/polaris";
+import { RefreshIcon } from "@shopify/polaris-icons";
 import { useRouter } from "next/navigation";
 import { UploadForm } from "@/app/components/UploadCSV/UploadForm";
 import { CsvProgress, UploadedFile } from "@/types/interfaces";
@@ -19,6 +26,7 @@ export default function UploadCsvPage() {
   const [loading, setLoading] = useState(true);
 
   const app = useAppBridge();
+
   const fetchFiles = async () => {
     setLoading(true);
     setTableLoading(true);
@@ -28,7 +36,7 @@ export default function UploadCsvPage() {
       const data = await res.json();
       console.log(data, "/database/upload-csv");
       setUploadedFiles(data);
-      console.log("csv data:",data)
+      console.log("csv data:", data);
       setHasFiles(data.length > 0);
     }
     setLoading(false);
@@ -63,7 +71,7 @@ export default function UploadCsvPage() {
       await fetchFiles();
       toast.show("CSV file deleted successfully.");
     } catch (error) {
-      toast.show("CSV file update Error.", { isError: true });
+      toast.show("CSV file delete Error.", { isError: true });
     }
   };
 
@@ -85,16 +93,22 @@ export default function UploadCsvPage() {
 
   return (
     <Page
-    fullWidth
+      fullWidth
       title="Upload CSV File"
       backAction={{ content: "Back", onAction: () => router.push("/database") }}
       primaryAction={
-        hasFiles && !formVisible
-          ? {
-              content: "New File",
-              onAction: () => setFormVisible(true),
-            }
-          : undefined
+        hasFiles && !formVisible ? (
+          <InlineStack gap="200">
+            <Tooltip content="Refresh file list">
+              <Button
+                icon={RefreshIcon}
+                onClick={fetchFiles}
+                accessibilityLabel="Refresh CSV list"
+              />
+            </Tooltip>
+            <Button onClick={() => setFormVisible(true)}>New File</Button>
+          </InlineStack>
+        ) : undefined
       }
     >
       <UploadForm

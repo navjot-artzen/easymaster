@@ -15,7 +15,7 @@ function extractLegacyId(gid: string): string {
 }
 
 function normalizeString(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  return str.toUpperCase();
 }
 
 const GET_PRODUCT_TAGS_QUERY = `

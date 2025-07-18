@@ -33,7 +33,7 @@ export default function ProductTargetSelector() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [engineType, setEngineType] = useState('');
-    const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
   const router = useRouter();
   const app = useAppBridge();
@@ -110,7 +110,7 @@ export default function ProductTargetSelector() {
     setYear(`${item.from}-${item.to}`);
     setMake(item.make);
     setModel(item.model);
-    setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD' |'4WD');
+    setdriveType(item.driveType as 'AWD' | 'FWD' | 'RWD' | '4WD');
     setEngineType(item.engineType);
     setNote(item.note);
     setEditIndex(index);
@@ -172,14 +172,14 @@ export default function ProductTargetSelector() {
 
   // ✅ Use resource picker
   const selectProducts = async () => {
-    
-    
+
+
     try {
-       const initialSelection = selectedItems.map((product) => ({
+      const initialSelection = selectedItems.map((product) => ({
         id: product.id,
         type: 'product',
       }));
-      const { selection }:any = await window.shopify.resourcePicker({
+      const { selection }: any = await window.shopify.resourcePicker({
         type: 'product',
         multiple: true,
         action: 'select',
@@ -215,7 +215,7 @@ export default function ProductTargetSelector() {
       title="Product Target Selector"
       backAction={{ content: 'Back', onAction: () => router.push('/database') }}
     >
-      <div style={{  margin: '0 auto' }}>
+      <div style={{ margin: '0 auto' }}>
         <BlockStack gap="400">
           <SelectedProductsCard
             selectedItems={selectedItems}
@@ -265,14 +265,14 @@ export default function ProductTargetSelector() {
                 });
               }}
               onChangeMake={(val) => {
-                const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
-                setMake(capitalized);
-                if (capitalized.trim()) {
+                const uppercased = val.toUpperCase();
+                setMake(uppercased);
+                if (uppercased.trim()) {
                   setValidationErrors((prev) => ({ ...prev, make: undefined }));
                 }
               }}
               onChangeModel={(val) => {
-                const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
+                const capitalized = val.toUpperCase();
                 setModel(capitalized);
                 if (capitalized.trim()) {
                   setValidationErrors((prev) => ({ ...prev, model: undefined }));
@@ -305,8 +305,8 @@ export default function ProductTargetSelector() {
             driveTypeOptions={driveTypeOptions}
             validationErrors={validationErrors}
             setYear={setYear}
-            setMake={(val) => setMake(val.charAt(0).toUpperCase() + val.slice(1))}
-            setModel={(val) => setModel(val.charAt(0).toUpperCase() + val.slice(1))}
+            setMake={(val) => setMake(val.toUpperCase())}
+            setModel={(val) => setModel(val.toUpperCase() )}
             setdriveType={setdriveType}
             setEngineType={setEngineType}
             setNote={setNote}
