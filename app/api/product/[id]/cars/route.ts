@@ -32,6 +32,9 @@ export async function GET(
         },
         skip,
         take: pageSize,
+        orderBy: {
+    createdAt: 'desc',
+  },
         select: {
           id: true,
           startFrom: true,

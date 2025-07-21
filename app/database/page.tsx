@@ -133,6 +133,7 @@ export default function SearchEntryListPage() {
           {/* Model Filter */}
           <Select
             label=""
+            disabled={!selectedMake}
             labelInline
             options={[{ label: 'All Models', value: '' }, ...modelsForMake.map((m) => ({ label: m.name, value: m.name }))]}
             value={selectedModel}

@@ -52,8 +52,20 @@ function AddYmmEntryPage() {
   const [editEngineType, setEditEngineType] = useState<string>('');
   const [editNote, setEditNote] = useState<string>('');
 
+  const onDuplicate = (index: number) => {
+    const entry = entries[index];
+    setYearFrom(entry.from);
+    setYearTo(entry.to);
+    setMake(entry.make.toUpperCase());
+    setModel(entry.model.toUpperCase());
+    setDriveType(entry.driveType as 'AWD' | 'FWD' | 'RWD' | '4WD');
+    setEngineType(entry.engineType);
+    setNote(entry.note);
+    setValidationErrors({});
+  };
+
   const YEAR_OPTIONS = Array.from({ length: 31 }, (_, i) => {
-    const year = 1995 + i;
+    const year = 2000 + i;
     return { label: `${year}`, value: `${year}` };
   });
 
@@ -80,15 +92,49 @@ function AddYmmEntryPage() {
     if (legacyId) fetchProduct();
   }, [legacyId]);
 
+  const clearError = (field: string) => {
+    setValidationErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[field];
+      return updated;
+    });
+  };
+
   const handleChangeYear = (type: 'from' | 'to', value: string) => {
+    if (value) {
+      clearError(type === 'from' ? 'yearFrom' : 'yearTo');
+    }
     if (type === 'from') setYearFrom(value);
     else setYearTo(value);
+  };
+
+  const handleChangeMake = (val: string) => {
+    setMake(val);
+    if (val.trim()) clearError('make');
+  };
+
+  const handleChangeModel = (val: string) => {
+    setModel(val);
+    if (val.trim()) clearError('model');
+  };
+
+  const handleChangeEngineType = (val: string) => {
+    setEngineType(val);
+    if (val.trim()) clearError('engineType');
+  };
+
+  const handleChangeNote = (val: string) => {
+    setNote(val);
   };
 
   const handleAddEntry = () => {
     const newErrors: Record<string, string> = {};
     if (!yearFrom) newErrors.yearFrom = 'Required';
     if (!yearTo) newErrors.yearTo = 'Required';
+     if (yearFrom && yearTo && yearFrom > yearTo) {
+      newErrors.yearFrom = 'From year must be less than or equal to To year';
+      newErrors.yearTo = 'To year must be greater than or equal to From year';
+    }
     if (!make) newErrors.make = 'Required';
     if (!model) newErrors.model = 'Required';
     if (!engineType) newErrors.engineType = 'Required';
@@ -134,6 +180,11 @@ function AddYmmEntryPage() {
     const [from, to] = editYear.split('-');
     if (!from) newErrors.yearFrom = 'Required';
     if (!to) newErrors.yearTo = 'Required';
+
+    if (from && to && from > to) {
+      newErrors.yearFrom = 'From year must be less than or equal to To year';
+      newErrors.yearTo = 'To year must be greater than or equal to From year';
+    }
     if (!editMake) newErrors.make = 'Required';
     if (!editModel) newErrors.model = 'Required';
     if (!editEngineType) newErrors.engineType = 'Required';
@@ -160,9 +211,25 @@ function AddYmmEntryPage() {
   };
 
   const handleSave = async () => {
+    const newErrors: Record<string, string> = {};
+    if (!yearFrom) newErrors.yearFrom = 'Required';
+    if (!yearTo) newErrors.yearTo = 'Required';
+    if (yearFrom && yearTo && yearFrom > yearTo) {
+      newErrors.yearFrom = 'From year must be less than or equal to To year';
+      newErrors.yearTo = 'To year must be greater than or equal to From year';
+    }
+    if (!make) newErrors.make = 'Required';
+    if (!model) newErrors.model = 'Required';
+    if (!engineType) newErrors.engineType = 'Required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setValidationErrors(newErrors);
+      return;
+    }
+
     const shop = (app as any)?.config?.shop;
-    const toast=app?.toast
-    if (!shop) return toast.show('Shop information is missing.',{isError:true});
+    const toast = app?.toast;
+    if (!shop) return toast.show('Shop information is missing.', { isError: true });
 
     setIsSaving(true);
     try {
@@ -186,7 +253,7 @@ function AddYmmEntryPage() {
       }
 
       if (updatedEntries.length === 0) {
-        toast.show('Please add at least one valid YMM entry.',{isError:true});
+        toast.show('Please add at least one valid YMM entry.', { isError: true });
         return;
       }
 
@@ -213,7 +280,7 @@ function AddYmmEntryPage() {
 
       if (result?.duplicateEntries?.length > 0) {
         const dup = result.duplicateEntries[0];
-        toast.show(`${dup.message} for ${dup.make} ${dup.model} ${dup.year}`,{isError:true});
+        toast.show(`${dup.message} for ${dup.make} ${dup.model} ${dup.year}`, { isError: true });
         return;
       }
 
@@ -229,7 +296,7 @@ function AddYmmEntryPage() {
       setNote('');
     } catch (err: any) {
       console.error('Save error:', err);
-      toast.show(err.message || 'An error occurred while saving.',{isError:true});
+      toast.show(err.message || 'An error occurred while saving.', { isError: true });
     } finally {
       setIsSaving(false);
     }
@@ -247,68 +314,71 @@ function AddYmmEntryPage() {
 
   return (
     <Page
-    backAction={{ content: "Back", onAction:()=>router.back() }}
-     fullWidth title="Add YMM Entry">
-      <div style={{margin: '0 auto' }}> 
-      <BlockStack gap="400">
-        <Card padding="600">
-          <Text as="p" variant="headingSm">Associated Product</Text>
-          <Text as="p">{productTitle}</Text>
-        </Card>
-        <EntryFormCard
-          year={`${yearFrom}-${yearTo}`}
-          make={make}
-          model={model}
-          driveType={driveType}
-          engineType={engineType}
-          note={note}
-          entries={entries}
-          yearOptions={YEAR_OPTIONS}
-          driveTypeOptions={DRIVE_TYPE_OPTIONS}
-          validationErrors={validationErrors}
-          isSaving={isSaving}
-          onChangeYear={handleChangeYear}
-          onChangeMake={setMake}
-          onChangeModel={setModel}
-          onChangedriveType={setDriveType}
-          onChangeEngineType={setEngineType}
-          onChangeNote={setNote}
-          onAddEntry={handleAddEntry}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onSave={handleSave}
-        />
+      backAction={{ content: "Back", onAction: () => router.back() }}
+      fullWidth
+      title="Add YMM Entry"
+    >
+      <div style={{ margin: '0 auto' }}>
+        <BlockStack gap="400">
+          <Card padding="600">
+            <Text as="p" variant="headingSm">Associated Product</Text>
+            <Text as="p">{productTitle}</Text>
+          </Card>
 
-        <EditEntryModal
-          open={editModalOpen}
-          year={editYear}
-          make={editMake}
-          model={editModel}
-          driveType={editDriveType}
-          engineType={editEngineType}
-          note={editNote}
-          yearOptions={YEAR_OPTIONS}
-          driveTypeOptions={DRIVE_TYPE_OPTIONS}
-          validationErrors={validationErrors}
-          setYear={setEditYear}
-          setMake={setEditMake}
-          setModel={setEditModel}
-          setdriveType={setEditDriveType}
-          setEngineType={setEditEngineType}
-          setNote={setEditNote}
-          onUpdate={handleUpdate}
-          onCancel={() => {
-            setEditModalOpen(false);
-            setValidationErrors({});
-          }}
-        />
-      </BlockStack>
+          <EntryFormCard
+            year={`${yearFrom}-${yearTo}`}
+            make={make}
+            model={model}
+            driveType={driveType}
+            engineType={engineType}
+            note={note}
+            entries={entries}
+            yearOptions={YEAR_OPTIONS}
+            driveTypeOptions={DRIVE_TYPE_OPTIONS}
+            validationErrors={validationErrors}
+            isSaving={isSaving}
+            onChangeYear={handleChangeYear}
+            onChangeMake={handleChangeMake}
+            onChangeModel={handleChangeModel}
+            onChangedriveType={setDriveType}
+            onChangeEngineType={handleChangeEngineType}
+            onChangeNote={handleChangeNote}
+            onAddEntry={handleAddEntry}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onSave={handleSave}
+            onDuplicate={onDuplicate}
+          />
+
+          <EditEntryModal
+            open={editModalOpen}
+            year={editYear}
+            make={editMake}
+            model={editModel}
+            driveType={editDriveType}
+            engineType={editEngineType}
+            note={editNote}
+            yearOptions={YEAR_OPTIONS}
+            driveTypeOptions={DRIVE_TYPE_OPTIONS}
+            validationErrors={validationErrors}
+            setYear={setEditYear}
+            setMake={setEditMake}
+            setModel={setEditModel}
+            setdriveType={setEditDriveType}
+            setEngineType={setEditEngineType}
+            setNote={setEditNote}
+            onUpdate={handleUpdate}
+            onCancel={() => {
+              setEditModalOpen(false);
+              setValidationErrors({});
+            }}
+          />
+        </BlockStack>
       </div>
     </Page>
   );
 }
 
-// ✅ Single default export: wrapped with Suspense
 export default function PageWrapper() {
   return (
     <Suspense fallback={<div>Loading...</div>}>

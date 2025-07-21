@@ -34,6 +34,23 @@ export default function ProductTargetSelector() {
   const [loading, setLoading] = useState(false);
   const [engineType, setEngineType] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+const onDuplicate = (index: number) => {
+  const entry = entries[index];
+  // Format year field
+  const yearValue = `${entry.from}-${entry.to}`;
+
+  // Fill form fields
+  setYear(yearValue);
+  setMake(entry.make.toUpperCase());
+  setModel(entry.model.toUpperCase());
+  setdriveType(entry.driveType as 'AWD' | 'FWD' | 'RWD' | '4WD');
+  setEngineType(entry.engineType);
+  setNote(entry.note);
+
+  // Clear validation errors and make sure form is visible
+  setValidationErrors({});
+  setShowForm(true);
+};
 
   const router = useRouter();
   const app = useAppBridge();
@@ -118,6 +135,8 @@ export default function ProductTargetSelector() {
   };
 
   const handleSave = async () => {
+    if (!validateFields()) return;
+
     const shop = (app as any)?.config?.shop;
     if (!shop) {
       return alert('Shop information is missing.');
@@ -134,9 +153,7 @@ export default function ProductTargetSelector() {
       updatedEntries.push(currentEntry);
     }
 
-    if (selectedItems.length === 0 || updatedEntries.length === 0) {
-      return alert('Please add at least one product and one YMM entry.');
-    }
+  
 
     const payload = updatedEntries.map((entry) => ({
       shop,
@@ -290,6 +307,7 @@ export default function ProductTargetSelector() {
               onEdit={openEditModal}
               onDelete={(index) => setEntries((prev) => prev.filter((_, i) => i !== index))}
               onSave={handleSave}
+              onDuplicate={onDuplicate}
             />
           )}
 

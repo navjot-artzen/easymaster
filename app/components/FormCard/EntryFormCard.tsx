@@ -9,7 +9,7 @@ import {
   Button,
   IndexTable,
 } from '@shopify/polaris';
-import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
+import { DeleteIcon, DuplicateIcon, EditIcon } from '@shopify/polaris-icons';
 import React, { useEffect, useState } from 'react';
 import { EntryProps } from '@/types/interfaces';
 
@@ -35,6 +35,7 @@ export function EntryFormCard({
   onEdit,
   onDelete,
   onSave,
+  onDuplicate,
 }: EntryProps) {
   const [makesData, setMakesData] = useState<{ name: string; models: any[] }[]>([]);
   const [makeOptions, setMakeOptions] = useState<{ label: string; value: string }[]>([]);
@@ -42,6 +43,7 @@ export function EntryFormCard({
 
   const [showMakeSuggestions, setShowMakeSuggestions] = useState(false);
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+
 
   useEffect(() => {
     const fetchMakeModel = async () => {
@@ -87,11 +89,12 @@ export function EntryFormCard({
     <Card padding="400">
       <BlockStack gap="200">
         {/* Top row */}
-        <InlineStack gap="300" wrap={false}>
+     
+        <InlineStack gap="300" wrap={false} >
           <div style={{ maxWidth: '25%', flexGrow: 1 }}>
             <Select
               label="From Year"
-              options={yearOptions}
+              options={[{ label: 'From Year', value: '' }, ...yearOptions]}
               value={year.split('-')[0] || ''}
               onChange={(val) => onChangeYear('from', val)}
               error={validationErrors.yearFrom}
@@ -100,7 +103,7 @@ export function EntryFormCard({
           <div style={{ maxWidth: '25%', flexGrow: 1 }}>
             <Select
               label="To Year"
-              options={yearOptions}
+              options={[{ label: 'To Year', value: '' }, ...yearOptions]}
               value={year.split('-')[1] || ''}
               onChange={(val) => onChangeYear('to', val)}
               error={validationErrors.yearTo}
@@ -108,7 +111,7 @@ export function EntryFormCard({
           </div>
 
           {/* Make hybrid input */}
-          <div style={{ position: 'relative', maxWidth: '25%', flexGrow: 1 }}>
+          <div style={{ position: 'relative', maxWidth: '25%', flexGrow: 1, zIndex: 9999 }}>
             <TextField
               label="Make"
               value={make}
@@ -124,6 +127,7 @@ export function EntryFormCard({
               onFocus={() => setShowMakeSuggestions(true)}
               onBlur={() => setTimeout(() => setShowMakeSuggestions(false), 150)}
             />
+
             {showMakeSuggestions && filterOptions(makeOptions, make).length > 0 && (
               <div
                 style={{
@@ -131,12 +135,13 @@ export function EntryFormCard({
                   top: '100%',
                   left: 0,
                   right: 0,
-                  zIndex: 1000,
+                  zIndex: 9999,
                   backgroundColor: 'white',
                   border: '1px solid #ccc',
                   borderTop: 'none',
-                  maxHeight: '150px',
+                  maxHeight: '100px',
                   overflowY: 'auto',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 }}
               >
                 {filterOptions(makeOptions, make).map((option) => (
@@ -147,7 +152,11 @@ export function EntryFormCard({
                       handleMakeChange(option.value);
                       setShowMakeSuggestions(false);
                     }}
-                    style={{ padding: '8px', cursor: 'pointer' }}
+                    style={{
+                      padding: '8px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #eee',
+                    }}
                   >
                     {option.label}
                   </div>
@@ -157,7 +166,7 @@ export function EntryFormCard({
           </div>
 
           {/* Model hybrid input */}
-          <div style={{ position: 'relative', maxWidth: '25%', flexGrow: 1 }}>
+          <div style={{ position: 'relative', maxWidth: '25%', flexGrow: 1, zIndex: 9998 }}>
             <TextField
               label="Model"
               value={model}
@@ -178,12 +187,13 @@ export function EntryFormCard({
                   top: '100%',
                   left: 0,
                   right: 0,
-                  zIndex: 1000,
+                  zIndex: 9998,
                   backgroundColor: 'white',
                   border: '1px solid #ccc',
                   borderTop: 'none',
-                  maxHeight: '150px',
+                  maxHeight: '100px',
                   overflowY: 'auto',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 }}
               >
                 {filterOptions(modelOptions, model).map((option) => (
@@ -193,7 +203,11 @@ export function EntryFormCard({
                       onChangeModel(option.value);
                       setShowModelSuggestions(false);
                     }}
-                    style={{ padding: '8px', cursor: 'pointer' }}
+                    style={{
+                      padding: '8px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #eee',
+                    }}
                   >
                     {option.label}
                   </div>
@@ -202,6 +216,7 @@ export function EntryFormCard({
             )}
           </div>
         </InlineStack>
+
 
         {/* Bottom row */}
         <InlineStack gap="300" wrap={false}>
@@ -274,6 +289,11 @@ export function EntryFormCard({
                         variant="tertiary"
                         onClick={() => onDelete(index)}
                       />
+                       <Button
+                icon={DuplicateIcon}
+                variant="tertiary"
+                onClick={() => onDuplicate(index)} // You handle this
+              />
                     </InlineStack>
                   </IndexTable.Cell>
                 </IndexTable.Row>
@@ -300,3 +320,5 @@ export function EntryFormCard({
     </Card>
   );
 }
+
+

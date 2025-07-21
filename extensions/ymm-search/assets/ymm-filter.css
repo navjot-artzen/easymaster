@@ -16,6 +16,14 @@
   flex-wrap: wrap;
 }
 
+#vin-form,
+#ymm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 .ymm-title {
   color: #c0181e;
   font-weight: bold;

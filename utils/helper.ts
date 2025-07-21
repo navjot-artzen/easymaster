@@ -14,19 +14,25 @@ export function generateMakeModelYearTags(
     ? engineTypes
     : engineTypes.split(',').map(e => e.trim());
 
-  for (let year = startYear; year <= endYear; year++) {
-    // First tag: make-model-year
-    tags.push(`eps-${make.toLowerCase()}-${model.toLowerCase()}-${year}`);
+  // Normalize inputs
+  const safeMake = make.toLowerCase();
+  const safeModel = model.toLowerCase().replace(/\s+/g, '-'); // replaces spaces with -
+  const safeDriveType = driveType.toLowerCase();
 
-    // Second tag: make-model-driveType-year-safeEngine
+  for (let year = startYear; year <= endYear; year++) {
+    // Tag: make-model-year
+    tags.push(`eps-${safeMake}-${safeModel}-${year}`);
+
+    // Tag: make-model-driveType-year-safeEngine
     for (const engine of engines) {
       const safeEngine = engine.replace(/\./g, 'o');
-      tags.push(`eps-${make.toLowerCase()}-${model.toLowerCase()}-${driveType}-${year}-${safeEngine}`);
+      tags.push(`eps-${safeMake}-${safeModel}-${safeDriveType}-${year}-${safeEngine}`);
     }
   }
 
   return tags;
 }
+
 
 
 export function generateSimpleTags(

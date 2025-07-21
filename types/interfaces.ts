@@ -164,6 +164,7 @@ export interface EntryProps {
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onSave: () => void;
+  onDuplicate: (index: number) => void
 }
 
 export interface ProductCarsTableProps {

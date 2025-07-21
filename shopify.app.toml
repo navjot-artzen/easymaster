@@ -1,14 +1,14 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "8dd5ca1071d78b899bdfe9ef40ebccf1"
-name = "Eparts master app"
-handle = "eparts-master-app"
-application_url = "https://esaymaster.vercel.app"
+client_id = "2bd64c9a0bc81c25db455a2827636a86"
+name = "EasyAccess-Year Make Model"
+handle = "easyacess-year-make-model"
+application_url = "https://r-programming-supplements-grey.trycloudflare.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "artzen-demo.myshopify.com"
+dev_store_url = "navjot-work.myshopify.com"
 include_config_on_deploy = true
 
 [webhooks]
@@ -25,9 +25,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://esaymaster.vercel.app/auth/callback",
-  "https://esaymaster.vercel.app/auth/shopify/callback",
-  "https://esaymaster.vercel.app/api/auth/callback"
+  "https://r-programming-supplements-grey.trycloudflare.com/auth/callback",
+  "https://r-programming-supplements-grey.trycloudflare.com/auth/shopify/callback",
+  "https://r-programming-supplements-grey.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

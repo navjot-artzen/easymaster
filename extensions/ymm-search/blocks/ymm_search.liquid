@@ -7,14 +7,41 @@
   <div class="ymm-inner-filter">
     <input type="text" id="vin-input" placeholder="Enter VIN" class="vin-input" maxlength="17">
     <button id="vin-search-btn" class="vin-search-button" onclick="searchByVin()">Search by VIN</button>
+     <label onclick="toggleManualSearch()" style="color: blue; cursor: pointer; margin-left: 12px; white-space: nowrap;">
+    Search Manually
+  </label>
   </div>
   <div id="vin-error" class="ymm-error-message"></div>
 
   <!-- VIN Result Display -->
   <div id="vin-vehicle-info" class="ymm-inner-filter" style="display: none; margin-top: 16px;"></div>
 
-  <!-- YMM Search -->
-  <div class="ymm-inner-filter" id="ymm-section" style="margin-top: 16px;">
+  <!-- VIN-based editable form -->
+<div class="ymm-inner-filter" id="vin-form" style="display: none; margin-top: 16px; flex-direction: column; gap: 12px;">
+  <div class="field-wrapper">
+    <input type="text" id="vin-make" class="ymm-dropdown" placeholder="Make">
+  </div>
+  <div class="field-wrapper">
+    <input type="text" id="vin-model" class="ymm-dropdown" placeholder="Model">
+  </div>
+  <div class="field-wrapper">
+    <input type="text" id="vin-year" class="ymm-dropdown" placeholder="Year">
+  </div>
+  <div class="field-wrapper">
+    <input type="text" id="vin-engine" class="ymm-dropdown" placeholder="Engine Type (e.g. 2.5L)">
+  </div>
+  <div class="field-wrapper">
+    <input type="text" id="vin-drive" class="ymm-dropdown" placeholder="Drive Type (e.g. AWD)">
+  </div>
+
+  <!-- Search Button -->
+<button id="vin-form-search-btn" class="vin-search-button" onclick="handleVinFormSearch()">Search</button>
+</div>
+
+
+
+  <!-- YMM Search Dropdown Form (hidden by default) -->
+  <div class="ymm-inner-filter" id="ymm-section" style="display: none; margin-top: 16px;">
     <div class="field-wrapper">
       <select id="ymm-make" class="ymm-dropdown">
         <option value="">- Make -</option>
@@ -39,18 +66,11 @@
       <div id="year-error" class="ymm-error-message"></div>
     </div>
 
-    <!-- Engine Type Field -->
     <div class="field-wrapper">
-      <input
-        type="text"
-        id="ymm-engine"
-        class="ymm-dropdown"
-        placeholder="Enter Engine Type (e.g. 2.5L,3.5L)"
-      />
+      <input type="text" id="ymm-engine" class="ymm-dropdown" placeholder="Enter Engine Type (e.g. 2.5L)">
       <div id="engine-error" class="ymm-error-message"></div>
     </div>
 
-    <!-- Drive Type Field -->
     <div class="field-wrapper">
       <select id="ymm-drive" class="ymm-dropdown">
         <option value="">- Drive Type -</option>
@@ -67,9 +87,10 @@
 
 <script>
   const APP_BASE_url = "https://epartsmaster-app.vercel.app";
+  let ymmData = {};
 
   function clearAllErrors() {
-    ['vin-error'].forEach(id => {
+    ['vin-error', 'make-error', 'model-error', 'year-error', 'drive-error', 'engine-error'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.textContent = '';
@@ -93,6 +114,13 @@
     button.textContent = loading ? 'Searching...' : 'Search';
   }
 
+  function toggleManualSearch() {
+    const section = document.getElementById('ymm-section');
+    section.style.display = 'flex';
+    section.style.flexDirection = 'row';
+
+  }
+
   async function checkProductTagExists(tag) {
     const shop = "{{ shop.permanent_domain | remove: 'https://' }}";
     try {
@@ -104,20 +132,15 @@
       return false;
     }
   }
-  
-    document.addEventListener("DOMContentLoaded", async () => {
+
+  document.addEventListener("DOMContentLoaded", async () => {
     const makeSelect = document.getElementById("ymm-make");
     const modelSelect = document.getElementById("ymm-model");
     const yearSelect = document.getElementById("ymm-year");
 
-    for (let year = 2000; year <= 2025; year++) {
-      yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
-    }
-
     try {
       const res = await fetch(`${APP_BASE_url}/api/make-model`);
       const data = await res.json();
-      ymmData = {};
 
       makeSelect.innerHTML = '<option value="">- Make -</option>';
       data.makes.forEach((make) => {
@@ -156,8 +179,41 @@
 
     document.getElementById("vin-input").addEventListener("input", clearAllErrors);
   });
+window.handleVinFormSearch = async function () {
+  clearAllErrors();
+  setLoading('vin-form-search-btn', true);
 
+  const make = document.getElementById('vin-make').value.trim().toLowerCase();
+  const model = document.getElementById('vin-model').value.trim().toLowerCase().replace(/\s+/g, '-');
+  const year = document.getElementById('vin-year').value.trim();
+  const drive = document.getElementById('vin-drive').value.trim().toLowerCase();
+  const engine = document.getElementById('vin-engine').value.trim().toLowerCase();
+  const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
+  let hasError = false;
+  if (!make) { showError("vin-error", "Make is required."); hasError = true; }
+  if (!model) { showError("vin-error", "Model is required."); hasError = true; }
+  if (!year) { showError("vin-error", "Year is required."); hasError = true; }
+
+  if (hasError) {
+    setLoading('vin-form-search-btn', false);
+    return;
+  }
+
+  let tag = `eps-${make}-${model}`;
+  if (drive) tag += `-${drive}`;
+  tag += `-${year}`;
+  if (engine) tag += `-${engine.replace(/\./g, 'o')}`;
+
+  const exists = await checkProductTagExists(tag);
+  if (exists) {
+    window.location.href = `/collections/${defaultCollection}/${tag}`;
+  } else {
+    showError("vin-error", "No products found.");
+  }
+
+  setLoading('vin-form-search-btn', false);
+};
   window.searchByVin = async function () {
     clearAllErrors();
     setLoading('vin-search-btn', true);
@@ -181,7 +237,7 @@
       let engineType = gptSummary.engine?.trim() || "";
 
       if (engineType.toUpperCase().includes("L")) {
-        let match = engineType.toUpperCase().match(/[^ ]*L/);
+        const match = engineType.toUpperCase().match(/[^ ]*L/);
         if (match) engineType = match[0];
       }
 
@@ -191,28 +247,30 @@
         return;
       }
 
-      // Display vehicle info
+      // Show vehicle info
       const infoDiv = document.getElementById("vin-vehicle-info");
-    infoDiv.innerHTML = `
-  <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px;">
-    <div><strong>Make:</strong>${make}</div>
-    <div><strong>Model:</strong>${model}</div>
-    <div><strong>Year:</strong>${year}</div>
-    <div><strong>DriveType:</strong>${driveType}</div>
-
-    <div><strong>EngineType:</strong>${engineType}</div>
-    <div><strong>Frame/VIN:</strong>${vin}</div>
-  </div>
-`;
-
+      infoDiv.innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px;">
+          <div><strong>Make:</strong> ${make}</div>
+          <div><strong>Model:</strong> ${model}</div>
+          <div><strong>Year:</strong> ${year}</div>
+          <div><strong>DriveType:</strong> ${driveType}</div>
+          <div><strong>EngineType:</strong> ${engineType}</div>
+          <div><strong>VIN:</strong> ${vin}</div>
+        </div>`;
       infoDiv.style.display = 'block';
 
-      // Pre-fill YMM inputs
-      document.getElementById('ymm-make').innerHTML = `<option value="${make}">${make}</option>`;
-      document.getElementById('ymm-model').innerHTML = `<option value="${model}">${model}</option>`;
-      document.getElementById('ymm-year').value = year;
-      document.getElementById('ymm-engine').value = engineType;
-      document.getElementById('ymm-drive').value = driveType;
+      // Show and pre-fill editable text input form
+      const vinForm = document.getElementById('vin-form');
+      vinForm.style.display = 'flex';
+      vinForm.style.flexDirection = 'row';
+      vinForm.style.gap = '12px'; 
+     
+      document.getElementById('vin-make').value = make;
+      document.getElementById('vin-model').value = model;
+      document.getElementById('vin-year').value = year;
+      document.getElementById('vin-engine').value = engineType;
+      document.getElementById('vin-drive').value = driveType;
 
     } catch (err) {
       console.error("VIN lookup failed:", err);
@@ -221,19 +279,19 @@
 
     setLoading('vin-search-btn', false);
   };
+
   window.handleSearch = async function () {
     clearAllErrors();
     setLoading('ymm-search-btn', true);
 
     const make = document.getElementById('ymm-make').value.trim().toLowerCase();
-    const model = document.getElementById('ymm-model').value.trim().toLowerCase();
+  const model = document.getElementById('ymm-model').value.trim().toLowerCase().replace(/\s+/g, '-');
     const year = document.getElementById('ymm-year').value;
     const drive = document.getElementById('ymm-drive').value.trim().toLowerCase();
     const engine = document.getElementById('ymm-engine').value.trim().toLowerCase();
     const defaultCollection = "{{ section.settings.default_collection | default: 'all' }}";
 
     let hasError = false;
-
     if (!make) { showError("make-error", "Select make."); hasError = true; }
     if (!model) { showError("model-error", "Select model."); hasError = true; }
     if (!year) { showError("year-error", "Select year."); hasError = true; }
@@ -246,15 +304,9 @@
     let tag = `eps-${make}-${model}`;
     if (drive) tag += `-${drive}`;
     tag += `-${year}`;
-
-    if (engine) {
-      const safeEngine = engine.replace(/\./g, 'o'); // replace all `.` with `o`
-
-      tag += `-${safeEngine}`;
-    }
+    if (engine) tag += `-${engine.replace(/\./g, 'o')}`;
 
     const exists = await checkProductTagExists(tag);
-
     if (exists) {
       window.location.href = `/collections/${defaultCollection}/${tag}`;
     } else {
@@ -262,24 +314,6 @@
     }
 
     setLoading('ymm-search-btn', false);
-  };
-   window.clearFilters = function () {
-    clearAllErrors();
-    document.getElementById('ymm-make').selectedIndex = 0;
-    document.getElementById('ymm-model').innerHTML = '<option value="">- Model -</option>';
-    document.getElementById('ymm-model').disabled = true;
-    document.getElementById('ymm-year').value = '';
-    document.getElementById('ymm-year').disabled = true;
-    document.getElementById('ymm-drive').selectedIndex = 0;
-    document.getElementById('ymm-drive').disabled = true;
-    document.getElementById('ymm-engine').value = '';
-    document.getElementById('ymm-engine').disabled = true;
-
-    document.getElementById('vin-input').value = '';
-    document.getElementById('vin-input').disabled = false;
-    document.getElementById('vin-search-btn').disabled = false;
-
-    document.getElementById('ymm-section').style.display = 'none';
   };
 </script>
 
